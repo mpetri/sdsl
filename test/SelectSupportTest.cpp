@@ -1,6 +1,7 @@
 
 #include "sdsl/int_vector.hpp"
 #include "sdsl/select_support_mcl.hpp" // for select_support_mcl
+#include "sdsl/select_support_clark.hpp" // for select_support_mcl
 #include "sdsl/bit_vector_interleaved.hpp" // for rank_support_interleaved
 #include "sdsl/rrr_vector.hpp" // for rrr_select_support
 #include "sdsl/sd_vector.hpp" // for sd_select_support
@@ -88,6 +89,7 @@ class SelectSupportTest : public ::testing::Test
 using testing::Types;
 
 typedef Types<sdsl::select_support_mcl<>,
+        sdsl::select_support_clark<>,
         sdsl::rrr_select_support<1, 256>,
         sdsl::rrr_select_support<1, 129>,
         sdsl::rrr_select_support<1, 192>,
