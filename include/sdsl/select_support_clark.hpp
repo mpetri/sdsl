@@ -198,26 +198,26 @@ struct select_support_clark_trait<01,2> {
 };
 
 
-//! A class containing a faithful implementation of constant time 
+//! A class containing a faithful implementation of constant time
 //  select queries proposed by clark in 1996.
-//  
-//  The space usage is at most 3n/log(log(n)). 
-//  
+//
+//  The space usage is at most 3n/log(log(n)).
+//
 //   First the bitvector is partitioned into superblocks covering
 //   log(n)*log(log(n)) elements each. Depending on the size r
 //   of the superblock more positions are stored:
-//   
+//
 //    Case 1) r > log(n)^2* log(log(n))^2: all positions are stored
 //              explicitly using log(n) bits each. this block
 //              is considered a "long" block.
-//              
+//
 //    Case 2) r < log(n)^2* log(log(n))^2: subdivide each superblock
 //              into subblocks covering log(r)*log(log(n)) positions
 //              each. The size of each subblock is r'. We store the
 //              first position of each block relative to the superblock
 //              using log(r) bits.
-//  
-//      Case 2a) If r' > log(r')*log(r)*log(log(n)) bits we additional 
+//
+//      Case 2a) If r' > log(r')*log(r)*log(log(n)) bits we additional
 //              store the position of each individual position relative
 //              to the position of each subblock at a cost of log(r') bits.
 //              this is referred to as a "miniblock". A superblock
@@ -230,7 +230,7 @@ struct select_support_clark_trait<01,2> {
 //
 //
 //  The space usage is at most 3n/log(log(n)) in the case we store subblocks
-//  and miniblocks for all superblocks. 
+//  and miniblocks for all superblocks.
 //
 
 template<uint8_t b=1, uint8_t pattern_len=1>
@@ -242,7 +242,7 @@ class select_support_clark : public select_support
         size_type m_count;                  // number of elements
         size_type m_numsuperblocks;         // number of superblocks
         uint32_t  m_elems_per_superblock;   // log(n)*log(log(n))
-        uint32_t  m_longthreshold;          // log^2(n)*(log(log(n)))^2 
+        uint32_t  m_longthreshold;          // log^2(n)*(log(log(n)))^2
         uint32_t  m_logn;                   // log(n)
         uint32_t  m_loglogn;                // log(log(n))
         int_vector<0>  m_superblocks;       // log(n) for each position
@@ -255,13 +255,13 @@ class select_support_clark : public select_support
         void initData();
         inline size_t superblock_width(size_type superblock) const;
         inline size_t block_width(size_type superblock,size_type block) const;
-        inline size_t elements_per_block(size_type superblock,size_type block) const; 
+        inline size_t elements_per_block(size_type superblock,size_type block) const;
 
         void process_block(size_type superblock,size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks);
         void store_longblock(int_vector<64>& pos,size_type superblock);
         void store_blocks(size_type superblock,int_vector<64>& pos,size_type width);
         void store_miniblock(size_type superblock,size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks,
-                            size_type skip,size_type num_elems);
+                             size_type skip,size_type num_elems);
         void process_superblock(int_vector<64>& pos,size_type superblock,bool last=false);
         void compress_mini_blocks(size_type superblock,int_vector<0>*& miniblocks);
     public:
@@ -270,12 +270,12 @@ class select_support_clark : public select_support
         ~select_support_clark();
         void init(const int_vector<1>* v=NULL);
 
-        void block_bytes(size_t& lb,size_t& bb,size_t& mb) const;
+        void block_bytes(size_t& sb,size_t& lb,size_t& bb,size_t& mb) const;
 
         inline const size_type select(size_type i) const;
         //! Alias for select(i).
         inline const size_type operator()(size_type i)const;
-        
+
         size_type serialize(std::ostream& out, structure_tree_node* v=NULL, std::string name="")const;
         void load(std::istream& in, const int_vector<1>* v=NULL);
         void set_vector(const int_vector<1>* v=NULL);
@@ -349,25 +349,25 @@ void select_support_clark<b,pattern_len>::copy(const select_support_clark<b, pat
     m_numsuperblocks = ss.m_numsuperblocks;
 
     // copy the pointers
-    if( m_longblocks ) delete [] m_longblocks;
-    if( m_blocks ) delete [] m_blocks;
-    if( m_miniblocks ) delete [] m_miniblocks;
+    if (m_longblocks) delete [] m_longblocks;
+    if (m_blocks) delete [] m_blocks;
+    if (m_miniblocks) delete [] m_miniblocks;
 
-    if( ss.m_longblocks != NULL ) {
+    if (ss.m_longblocks != NULL) {
         m_longblocks = new int_vector<0>[m_numsuperblocks];
         for (size_type i=0; i<m_numsuperblocks; ++i) {
             m_longblocks[i] = ss.m_longblocks[i];
         }
     }
 
-    if( ss.m_blocks != NULL ) {
+    if (ss.m_blocks != NULL) {
         m_blocks = new int_vector<0>[m_numsuperblocks];
         for (size_type i=0; i<m_numsuperblocks; ++i) {
             m_blocks[i] = ss.m_blocks[i];
         }
     }
 
-    if( ss.m_miniblocks!=NULL ) {
+    if (ss.m_miniblocks!=NULL) {
         m_miniblocks = new int_vector<0>[m_numsuperblocks];
         for (size_type i=0; i<m_numsuperblocks; ++i) {
             m_miniblocks[i] = ss.m_miniblocks[i];
@@ -378,9 +378,9 @@ void select_support_clark<b,pattern_len>::copy(const select_support_clark<b, pat
 template<uint8_t b, uint8_t pattern_len>
 select_support_clark<b,pattern_len>::~select_support_clark()
 {
-    if( m_longblocks != NULL ) delete [] m_longblocks;
-    if( m_blocks != NULL ) delete [] m_blocks;
-    if( m_miniblocks != NULL ) delete [] m_miniblocks;
+    if (m_longblocks != NULL) delete [] m_longblocks;
+    if (m_blocks != NULL) delete [] m_blocks;
+    if (m_miniblocks != NULL) delete [] m_miniblocks;
 }
 
 /**
@@ -389,9 +389,9 @@ select_support_clark<b,pattern_len>::~select_support_clark()
 template<uint8_t b, uint8_t pattern_len>
 size_t select_support_clark<b,pattern_len>::superblock_width(size_type superblock)  const
 {
-    if(superblock == m_numsuperblocks-1 ) 
+    if (superblock == m_numsuperblocks-1)
         return v->size() - m_superblocks[superblock];
-    else 
+    else
         return m_superblocks[superblock+1] - m_superblocks[superblock];
 }
 
@@ -399,14 +399,14 @@ size_t select_support_clark<b,pattern_len>::superblock_width(size_type superbloc
  *  returns the size of a specific block in a superblock.
  */
 template<uint8_t b, uint8_t pattern_len>
-size_t select_support_clark<b,pattern_len>::block_width(size_type superblock,size_type block) const 
+size_t select_support_clark<b,pattern_len>::block_width(size_type superblock,size_type block) const
 {
-    if(block==0)
+    if (block==0)
         return m_blocks[superblock][0];
 
-    if(block==m_blocks[superblock].size()) {
-        return m_superblocks[superblock+1] - 
-               ( m_superblocks[superblock] + m_blocks[superblock][block-1]);
+    if (block==m_blocks[superblock].size()) {
+        return m_superblocks[superblock+1] -
+               (m_superblocks[superblock] + m_blocks[superblock][block-1]);
     }
     return m_blocks[superblock][block] - m_blocks[superblock][block-1];
 }
@@ -419,7 +419,7 @@ size_t select_support_clark<b,pattern_len>::elements_per_block(size_type superbl
 {
     size_type r = m_superblocks[superblock+1] - m_superblocks[superblock];
     size_type logr = bit_magic::l1BP(r)+1;
-    if(block==m_blocks[superblock].size()) {
+    if (block==m_blocks[superblock].size()) {
         return m_elems_per_superblock - m_blocks[superblock].size()*(logr*m_loglogn);
     }
     return (logr*m_loglogn);
@@ -431,12 +431,12 @@ size_t select_support_clark<b,pattern_len>::elements_per_block(size_type superbl
  */
 template<uint8_t b, uint8_t pattern_len>
 void select_support_clark<b,pattern_len>::store_longblock(int_vector<64>& pos,
-                                            size_type superblock) 
+        size_type superblock)
 {
     // we store all positions explicitly using log(n) bits
-    if (m_longblocks == NULL) 
+    if (m_longblocks == NULL)
         m_longblocks = new int_vector<0>[m_numsuperblocks];
-    m_longblocks[superblock] = int_vector<0>( pos.size()-1 , 0 , m_logn );
+    m_longblocks[superblock] = int_vector<0>(pos.size()-1 , 0 , m_logn);
 
     // copy the positions into the long block
     for (size_type j=0; j < pos.size()-1; j++) {
@@ -449,18 +449,18 @@ void select_support_clark<b,pattern_len>::store_longblock(int_vector<64>& pos,
  */
 template<uint8_t b, uint8_t pattern_len>
 void select_support_clark<b,pattern_len>::store_blocks(size_type superblock,
-    int_vector<64>& pos,size_type width) 
+        int_vector<64>& pos,size_type width)
 {
-    if (m_blocks == NULL) 
+    if (m_blocks == NULL)
         m_blocks = new int_vector<0>[m_numsuperblocks];
 
     // we don't count the first position as we store it explicitly
     size_type subblock_size = width * m_loglogn;
     size_type num_blocks = pos.size()/subblock_size;
-    if(pos.size() % subblock_size == 0) num_blocks--;
+    if (pos.size() % subblock_size == 0) num_blocks--;
 
-    if(num_blocks) {
-        m_blocks[superblock] = int_vector<0>( num_blocks , 0 , width );
+    if (num_blocks) {
+        m_blocks[superblock] = int_vector<0>(num_blocks , 0 , width);
 
         // we sample every blocksize-th position and store the relative
         // position in logr bits
@@ -476,9 +476,9 @@ void select_support_clark<b,pattern_len>::store_blocks(size_type superblock,
  *   decide if we have to store miniblocks for a given block or not
  */
 template<uint8_t b, uint8_t pattern_len>
-void 
+void
 select_support_clark<b,pattern_len>::process_block(size_type superblock,
-    size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks) 
+        size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks)
 {
     // check how big the block is to decide if we store something
     size_type sb_width = superblock_width(superblock); // r
@@ -489,9 +489,9 @@ select_support_clark<b,pattern_len>::process_block(size_type superblock,
 
     // we only store mini blocks if we are larger than the threshold
     // of log(r')*log(r)*loglog(n)
-    if( blocksize >= threshold ) {
+    if (blocksize >= threshold) {
         size_type num_elems = bits_super*m_loglogn;
-        if(block == m_blocks[superblock].size()) {
+        if (block == m_blocks[superblock].size()) {
             // last block might have less elements
             num_elems = pos.size()%num_elems;
         }
@@ -505,19 +505,19 @@ select_support_clark<b,pattern_len>::process_block(size_type superblock,
  *   using log(r') bits each.
  */
 template<uint8_t b, uint8_t pattern_len>
-void 
+void
 select_support_clark<b,pattern_len>::store_miniblock(size_type superblock,
-    size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks,
-    size_type skip,size_type num_elems) 
+        size_type block,int_vector<64>& pos,int_vector<0>*& miniblocks,
+        size_type skip,size_type num_elems)
 {
     size_type blocksize = block_width(superblock,block); // r'
     size_type bits_block = bit_magic::l1BP(blocksize)+1; // log(r')
 
     // store each relative position in log(r') bits
-    miniblocks[block] = int_vector<0>( num_elems , 0 , bits_block );
+    miniblocks[block] = int_vector<0>(num_elems , 0 , bits_block);
 
     size_type start = m_superblocks[superblock];
-    if(block!=0)
+    if (block!=0)
         start += m_blocks[superblock][block-1];
 
     for (size_type i = 1; i < num_elems; ++i) {
@@ -527,16 +527,16 @@ select_support_clark<b,pattern_len>::store_miniblock(size_type superblock,
 
 /**
  *   process a superblock. first decide if we have a long block or if we
- *   divide into subblocks. 
+ *   divide into subblocks.
  */
 template<uint8_t b, uint8_t pattern_len>
 void select_support_clark<b,pattern_len>::process_superblock(int_vector<64>&
-    pos,size_type superblock,bool last) 
+        pos,size_type superblock,bool last)
 {
     // the "width" of the block
     size_type r = superblock_width(superblock);
 
-    if(  last || r >= m_longthreshold  ) {
+    if (last || r >= m_longthreshold) {
         store_longblock(pos,superblock);
     } else {
         // subdivide the super block
@@ -571,9 +571,9 @@ void select_support_clark<b,pattern_len>::process_superblock(int_vector<64>&
  *   the bitvector.
  */
 template<uint8_t b, uint8_t pattern_len>
-void 
+void
 select_support_clark<b,pattern_len>::compress_mini_blocks(size_type superblock,
-    int_vector<0>*& miniblocks)
+        int_vector<0>*& miniblocks)
 {
 
     uint64_t mask = 0;
@@ -582,14 +582,14 @@ select_support_clark<b,pattern_len>::compress_mini_blocks(size_type superblock,
     // resulting vector
     size_type bits = 0;
     for (size_type i = 0; i < m_blocks[superblock].size()+1; ++i) {
-        if( miniblocks[i].size() > 0 ) {
+        if (miniblocks[i].size() > 0) {
             bits += miniblocks[i].size()*miniblocks[i].get_int_width();
             mask |= (1ULL << i);
             stored++;
         }
     }
 
-    if(stored) {
+    if (stored) {
         size_type header_size = sizeof(mask) + sizeof(stored) + stored*32;
         size_type bits_per_pos = bit_magic::l1BP(header_size+bits)+1;
 
@@ -600,30 +600,30 @@ select_support_clark<b,pattern_len>::compress_mini_blocks(size_type superblock,
         bits += stored*bits_per_pos; // starting pos of each mini block
 
 
-        if(m_miniblocks== NULL)
+        if (m_miniblocks== NULL)
             m_miniblocks = new int_vector<0>[m_numsuperblocks];
         m_miniblocks[superblock] = int_vector<0>(bits,0,1);
 
-        // write 
+        // write
         uint64_t* data = (uint64_t*) m_miniblocks[superblock].data();
         uint8_t offset = 0;
         size_type written = 0;
 
-        // write header 
+        // write header
         bit_magic::write_int_and_move(data,mask,offset,sizeof(mask)*8);
         written += sizeof(mask)*8;
-        bit_magic::write_int_and_move(data,stored,offset,sizeof(stored)*8 );
+        bit_magic::write_int_and_move(data,stored,offset,sizeof(stored)*8);
         written += sizeof(stored)*8;
         bit_magic::write_int_and_move(data,bits_per_pos,offset,sizeof(stored)*8);
         written += sizeof(stored)*8;
 
         size_type cur_offset = sizeof(mask)*8 + sizeof(stored)*8 + sizeof(stored)*8
-                    + stored*bits_per_pos;
+                               + stored*bits_per_pos;
 
 
         // write length
         for (size_type i = 0; i < m_blocks[superblock].size()+1; ++i) {
-            if( miniblocks[i].size() > 0 ) {
+            if (miniblocks[i].size() > 0) {
                 bit_magic::write_int_and_move(data,cur_offset,offset,bits_per_pos);
                 cur_offset += miniblocks[i].size()*miniblocks[i].get_int_width();
                 written += bits_per_pos;
@@ -632,15 +632,15 @@ select_support_clark<b,pattern_len>::compress_mini_blocks(size_type superblock,
 
         // write data
         for (size_type i = 0; i < m_blocks[superblock].size()+1; ++i) {
-            if( miniblocks[i].size() > 0 ) {
+            if (miniblocks[i].size() > 0) {
                 for (size_type j = 0; j < miniblocks[i].size(); ++j) {
                     bit_magic::write_int_and_move(data,miniblocks[i][j],offset,
-                                        miniblocks[i].get_int_width());
+                                                  miniblocks[i].get_int_width());
                     written += miniblocks[i].get_int_width();
                 }
             }
         }
-        assert( written == bits );
+        assert(written == bits);
     }
 }
 
@@ -652,7 +652,7 @@ void select_support_clark<b,pattern_len>::init(const int_vector<1>* v)
     initData();
     if (m_v==NULL)
         return;
-    
+
     // Count the number of elements in the bit vector
     m_count = select_support_clark_trait<b,pattern_len>::arg_cnt(*v);
     if (m_count==0) // if there are no elements in the vector we are done...
@@ -682,7 +682,7 @@ void select_support_clark<b,pattern_len>::init(const int_vector<1>* v)
     // the previous superblock.
     for (size_type i=m_superblocks[0]+1; i < v->size(); ++i) {
         if (select_support_clark_trait<b,pattern_len>::found_arg(i, *v)) {
-            if( cur_block_cnt == m_elems_per_superblock ) {
+            if (cur_block_cnt == m_elems_per_superblock) {
                 m_superblocks[cur_superblock] = i;
                 process_superblock(element_positions,cur_superblock-1);
                 cur_superblock++;
@@ -691,16 +691,16 @@ void select_support_clark<b,pattern_len>::init(const int_vector<1>* v)
             element_positions[cur_block_cnt] = i;
             cnt++;
             cur_block_cnt++;
-            if(cnt == m_count) break;
+            if (cnt == m_count) break;
         }
     }
     // process the last superblock if there are elements left over
-    if(cur_block_cnt!=0) {
+    if (cur_block_cnt!=0) {
         element_positions.resize(cur_block_cnt);
         process_superblock(element_positions,cur_superblock-1,true);
     }
 
-    assert( m_numsuperblocks == cur_superblock );
+    assert(m_numsuperblocks == cur_superblock);
 }
 
 template<uint8_t b, uint8_t pattern_len>
@@ -717,12 +717,12 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
     size_type block_offset = i%m_elems_per_superblock;
     size_type r = superblock_width(superblock);
 
-    if(block_offset==0) { // we store the position explicitly as it is the
-                          // first element of a superblock
+    if (block_offset==0) { // we store the position explicitly as it is the
+        // first element of a superblock
         return m_superblocks[superblock];
     }
 
-    if( superblock == m_numsuperblocks-1 || r >= m_longthreshold ) {
+    if (superblock == m_numsuperblocks-1 || r >= m_longthreshold) {
         // get the answer directly from the pre-stored positions in the long block
         return m_longblocks[superblock][block_offset-1];
     } else {
@@ -736,13 +736,13 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
 
         // check if the answer is one of the ones stored in the blocks
         // anyway
-        if( block_offset % (elements_per_block) == 0) {
+        if (block_offset % (elements_per_block) == 0) {
             // if this is true, block always >= 1
             assert(block >= 1);
             return m_superblocks[superblock] + m_blocks[superblock][block-1];
         }
 
-        if(block_size >= threshold) {   
+        if (block_size >= threshold) {
             // process miniblock to get the answer
             const uint64_t* data = m_miniblocks[superblock].data();
             // determine which of the stored mini blocks we want to access
@@ -752,7 +752,7 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
             data++;
             uint64_t offsetwidth = bit_magic::read_int(data,8,8);
             uint64_t start_pos = bit_magic::read_int(data,16+((id-1)*offsetwidth)
-                                                     ,offsetwidth);
+                                 ,offsetwidth);
 
             // skip to the correct element
             size_type subblock_offset = block_offset % elements_per_block;
@@ -760,33 +760,33 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
 
             // now retrieve the number we are looking for
             const uint64_t* mb_data = (m_miniblocks[superblock].data() +
-                                        (start_pos >> 6));
+                                       (start_pos >> 6));
             uint8_t offset = start_pos&63;
             uint64_t elem_pos = bit_magic::read_int(mb_data,offset,bits_block);
 
             // finally add up all the numbers
-            if(block==0) return m_superblocks[superblock] + elem_pos;
+            if (block==0) return m_superblocks[superblock] + elem_pos;
             else return m_superblocks[superblock] + m_blocks[superblock][block-1] + elem_pos;
         } else {
             size_type finalpos = m_superblocks[superblock];
             size_type word = (m_superblocks[superblock]>>6);
             // perform a scan through the bitvector
-            
+
 
             // determine the starting position in the bitvector
             const uint64_t* data = m_v->data() + (m_superblocks[superblock]>>6);
             uint8_t offset = m_superblocks[superblock]&63;
-            if(block != 0) { 
+            if (block != 0) {
                 finalpos += m_blocks[superblock][block-1];
                 data += (m_blocks[superblock][block-1]>>6);
                 offset += (m_blocks[superblock][block-1]&63);
                 word += (m_blocks[superblock][block-1]>>6);
             }
-            if(offset>=64) {
+            if (offset>=64) {
                 data++;
                 offset -= 64;
                 word++;
-            } 
+            }
 
             // substract the number of elements we skipped
             i -= superblock*m_elems_per_superblock;
@@ -795,9 +795,9 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
             // first align to 64 bits so we can scan faster after
             uint64_t carry_unused;
             size_type cnt = select_support_clark_trait<b,pattern_len>::args_in_the_first_word(*data,offset+1,carry_unused);
-            if(cnt >= i) {
-                return finalpos + 
-                    select_support_clark_trait<b,pattern_len>::ith_arg_pos_in_the_first_word(*data,i,offset+1,carry_unused) - offset;
+            if (cnt >= i) {
+                return finalpos +
+                       select_support_clark_trait<b,pattern_len>::ith_arg_pos_in_the_first_word(*data,i,offset+1,carry_unused) - offset;
             }
             finalpos += 64-offset;
             // scan
@@ -806,7 +806,7 @@ inline const typename select_support_clark<b,pattern_len>::size_type select_supp
                 i -= cnt;
                 data++;
                 cnt = select_support_clark_trait<b,pattern_len>::args_in_the_word(*data,carry_unused);
-            } while( cnt < i ); 
+            } while (cnt < i);
             finalpos += select_support_clark_trait<b,pattern_len>::ith_arg_pos_in_the_word(*data,i,carry_unused);
             finalpos -= 64;
 
@@ -834,15 +834,15 @@ void select_support_clark<b,pattern_len>::initData()
         m_elems_per_superblock = 0;
         m_longthreshold = 0;
     } else {
-        m_logn = bit_magic::l1BP(m_v->size())+1; 
-        m_loglogn = bit_magic::l1BP( bit_magic::l1BP(m_v->size()) )+1;
+        m_logn = bit_magic::l1BP(m_v->size())+1;
+        m_loglogn = bit_magic::l1BP(bit_magic::l1BP(m_v->size()))+1;
         m_elems_per_superblock = m_logn*m_loglogn;
         m_longthreshold = (m_logn*m_logn) * (m_loglogn*m_loglogn);
     }
 
-    if(m_longblocks) delete [] m_longblocks;
-    if(m_blocks) delete [] m_blocks;
-    if(m_miniblocks) delete [] m_miniblocks;
+    if (m_longblocks) delete [] m_longblocks;
+    if (m_blocks) delete [] m_blocks;
+    if (m_miniblocks) delete [] m_miniblocks;
 
     m_longblocks = m_blocks = m_miniblocks = NULL;
 }
@@ -858,18 +858,33 @@ void select_support_clark<b,pattern_len>::set_vector(const int_vector<1>* v)
  *  return the number of long blocks in the data structure
  */
 template<uint8_t b, uint8_t pattern_len>
-void select_support_clark<b,pattern_len>::block_bytes(size_t& lb,size_t& bb,size_t& mb) const
+void select_support_clark<b,pattern_len>::block_bytes(size_t& sb,size_t& lb,size_t& bb,size_t& mb) const
 {
     lb = 0;
     bb = 0;
     mb = 0;
+    int_vector<1> block_type_long(m_numsuperblocks);
+    int_vector<1> block_type_mini(m_numsuperblocks);
+
+    sb = util::get_size_in_bytes(m_superblocks);
+
+    if (m_longblocks!=NULL) {
+        for (size_type i=0; i< m_numsuperblocks; ++i)
+            block_type_long[i] = !m_longblocks[i].empty();
+    }
+
+    if (m_miniblocks!=NULL) {
+        for (size_type i=0; i< m_numsuperblocks; ++i)
+            block_type_mini[i] = !m_miniblocks[i].empty();
+    }
+
     for (size_type i=0; i< m_numsuperblocks; ++i) {
-        if(block_type_long[i])
-            lb+= m_longblocks[i].serialize(out);
+        if (block_type_long[i])
+            lb+= util::get_size_in_bytes(m_longblocks[i]);
         else {
-            bb+= m_blocks[i].serialize(out);
-            if(block_type_mini[i]) {
-                mb+= m_miniblocks[i].serialize(out);
+            bb+= util::get_size_in_bytes(m_blocks[i]);
+            if (block_type_mini[i]) {
+                mb+= util::get_size_in_bytes(m_miniblocks[i]);
             }
         }
     }
@@ -914,11 +929,11 @@ typename select_support_clark<b,pattern_len>::size_type select_support_clark<b,p
     size_type written_block = 0;
     size_type written_mini = 0;
     for (size_type i=0; i< m_numsuperblocks; ++i) {
-        if(block_type_long[i])
+        if (block_type_long[i])
             written_long+= m_longblocks[i].serialize(out);
         else {
             written_block+= m_blocks[i].serialize(out);
-            if(block_type_mini[i]) {
+            if (block_type_mini[i]) {
                 written_mini+= m_miniblocks[i].serialize(out);
             }
         }
@@ -951,7 +966,7 @@ void select_support_clark<b,pattern_len>::load(std::istream& in, const int_vecto
     util::read_member(m_logn,in);
     util::read_member(m_loglogn,in);
 
-    m_superblocks.load(in); 
+    m_superblocks.load(in);
 
     int_vector<1> block_type_long;
     int_vector<1> block_type_mini;
@@ -964,11 +979,11 @@ void select_support_clark<b,pattern_len>::load(std::istream& in, const int_vecto
     m_miniblocks = new int_vector<0>[m_numsuperblocks];
 
     for (size_type i=0; i< m_numsuperblocks; ++i) {
-        if(block_type_long[i])
+        if (block_type_long[i])
             m_longblocks[i].load(in);
         else {
             m_blocks[i].load(in);
-            if(block_type_mini[i]) m_miniblocks[i].load(in);
+            if (block_type_mini[i]) m_miniblocks[i].load(in);
         }
     }
 }
