@@ -270,6 +270,8 @@ class select_support_clark : public select_support
         ~select_support_clark();
         void init(const int_vector<1>* v=NULL);
 
+        void block_bytes(size_t& lb,size_t& bb,size_t& mb) const;
+
         inline const size_type select(size_type i) const;
         //! Alias for select(i).
         inline const size_type operator()(size_type i)const;
@@ -850,6 +852,29 @@ void select_support_clark<b,pattern_len>::set_vector(const int_vector<1>* v)
 {
     m_v = v;
 }
+
+
+/*
+ *  return the number of long blocks in the data structure
+ */
+template<uint8_t b, uint8_t pattern_len>
+void select_support_clark<b,pattern_len>::block_bytes(size_t& lb,size_t& bb,size_t& mb) const
+{
+    lb = 0;
+    bb = 0;
+    mb = 0;
+    for (size_type i=0; i< m_numsuperblocks; ++i) {
+        if(block_type_long[i])
+            lb+= m_longblocks[i].serialize(out);
+        else {
+            bb+= m_blocks[i].serialize(out);
+            if(block_type_mini[i]) {
+                mb+= m_miniblocks[i].serialize(out);
+            }
+        }
+    }
+}
+
 
 /*
  * store the support structure. use two small bitvectors marking how we stored
