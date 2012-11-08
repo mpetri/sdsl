@@ -98,6 +98,7 @@ class select_support
 #include "select_support_bs.hpp"
 #include "select_support_mcl.hpp"
 #include "select_support_clark.hpp"
+#include "select_support_clarks.hpp"
 #include "select_support_dummy.hpp"
 
 #endif
