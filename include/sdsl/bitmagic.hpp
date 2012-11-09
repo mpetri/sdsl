@@ -906,21 +906,26 @@ inline uint16_t bit_magic::max_excess3(uint64_t x, uint16_t& b1Cnt)
 // see page 11, Knuth TAOCP Vol 4 F1A
 inline uint64_t bit_magic::b1Cnt(uint64_t x)
 {
+#ifdef POP_SSE
 #ifdef __SSE4_2__
     return __builtin_popcountll(x);
 #else
-#ifdef POPCOUNT_TL
+    return (uint64_t)-1;
+#endif
+#endif
+#ifdef POP_TABLE
     return B1CntBytes[x&0xFFULL] + B1CntBytes[(x>>8)&0xFFULL] +
            B1CntBytes[(x>>16)&0xFFULL] + B1CntBytes[(x>>24)&0xFFULL] +
            B1CntBytes[(x>>32)&0xFFULL] + B1CntBytes[(x>>40)&0xFFULL] +
            B1CntBytes[(x>>48)&0xFFULL] + B1CntBytes[(x>>56)&0xFFULL];
-#else
+#endif
+#ifdef POP_BW
     x = x-((x>>1) & 0x5555555555555555ull);
     x = (x & 0x3333333333333333ull) + ((x >> 2) & 0x3333333333333333ull);
     x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0full;
     return (0x0101010101010101ull*x >> 56);
 #endif
-#endif
+    return (uint64_t)-1;
 }
 
 inline uint32_t bit_magic::b1Cnt32(uint32_t x)
