@@ -925,7 +925,14 @@ inline uint64_t bit_magic::b1Cnt(uint64_t x)
     x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0full;
     return (0x0101010101010101ull*x >> 56);
 #endif
-    return (uint64_t)-1;
+#ifdef __SSE4_2__
+    return __builtin_popcountll(x);
+#else
+    x = x-((x>>1) & 0x5555555555555555ull);
+    x = (x & 0x3333333333333333ull) + ((x >> 2) & 0x3333333333333333ull);
+    x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0full;
+    return (0x0101010101010101ull*x >> 56);
+#endif
 }
 
 inline uint32_t bit_magic::b1Cnt32(uint32_t x)
