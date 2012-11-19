@@ -90,6 +90,9 @@ using testing::Types;
 
 typedef Types<sdsl::select_support_mcl<>,
         sdsl::select_support_clark<>,
+        sdsl::select_support_clarks<>,
+        sdsl::select_support_ggmn,
+        sdsl::select_support_ggmnh,
         sdsl::rrr_select_support<1, 256>,
         sdsl::rrr_select_support<1, 129>,
         sdsl::rrr_select_support<1, 192>,
