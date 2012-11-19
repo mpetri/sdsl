@@ -88,13 +88,13 @@ class select_support_ggmn : public select_support
 
 };
 
-inline select_support_ggmn::select_support_ggmn(const int_vector<1>* v)
+inline select_support_ggmn::select_support_ggmn(const int_vector<1>* v) : select_support(v)
 {
     m_logn = 0;
     init(v);
 }
 
-inline select_support_ggmn::select_support_ggmn(const select_support_ggmn& ss) : select_support()
+inline select_support_ggmn::select_support_ggmn(const select_support_ggmn& ss) : select_support(ss.v)
 {
     set_vector(ss.m_v);
     m_superblockrank = ss.m_superblockrank;
