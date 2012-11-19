@@ -184,7 +184,7 @@ inline const select_support_ggmnh::size_type select_support_ggmnh::select(size_t
     size_type rsidx = 0; // index in m_rank_samples
     while (lb < rb) {
         size_type mid = (lb+rb)/2; // select mid \in [lb..rb)
-        if (idx < m_rank_samples.size()) {
+        if (rsidx < m_rank_samples.size()) {
             if (m_rank_samples[rsidx] >= idx) {
                 rsidx = (rsidx<<1) + 1;
                 rb = mid;

@@ -69,22 +69,6 @@ class select_support_ggmn : public select_support
          */
         void swap(select_support_ggmn& ss);
 
-        // precondition: m_rank_samples.size() <= m_superblocks
-        void init_rank_samples() {
-            size_type idx = 0;
-            std::queue<size_type> lbs, rbs;
-            lbs.push(0); rbs.push(m_superblockrank.size()-1);
-            while (!lbs.empty()) {
-                size_type lb = lbs.front(); lbs.pop();
-                size_type rb = rbs.front(); rbs.pop();
-                if (/*lb < rb and*/ idx < m_rank_samples.size()) {
-                    size_type mid = lb + (rb-lb)/2; // select mid \in [lb..rb)
-                    m_rank_samples[ idx++ ] = m_superblockrank[mid];
-                    lbs.push(lb); rbs.push(mid);
-                    lbs.push(mid+1); rbs.push(rb);
-                }
-            }
-        }
 
 };
 
@@ -99,7 +83,6 @@ inline select_support_ggmn::select_support_ggmn(const select_support_ggmn& ss) :
     set_vector(ss.m_v);
     m_superblockrank = ss.m_superblockrank;
     m_blockrank		 = ss.m_blockrank;
-    m_rank_samples   = ss.m_rank_samples;
 }
 
 inline select_support_ggmn& select_support_ggmn::operator=(const select_support_ggmn& ss)
@@ -108,7 +91,6 @@ inline select_support_ggmn& select_support_ggmn::operator=(const select_support_
         set_vector(ss.m_v);
         m_superblockrank = ss.m_superblockrank;
         m_blockrank		= ss.m_blockrank;
-        m_rank_samples   = ss.m_rank_samples;
     }
     return *this;
 }
@@ -119,7 +101,6 @@ inline void select_support_ggmn::swap(select_support_ggmn& ss)
         std::swap(m_logn, ss.m_logn);
         m_superblockrank.swap(ss.m_superblockrank);
         m_blockrank.swap(ss.m_blockrank);
-        m_rank_samples.swap(ss.m_rank_samples);
     }
 }
 
@@ -165,13 +146,6 @@ inline void select_support_ggmn::init(const int_vector<1>* v)
         m_blockrank[i] = blockcnt;
     }
 
-    if (m_superblockrank.size() > 512) {
-        // we store at most m_superblocks+1 rank_samples:
-        // we do a cache efficient binary search for the select on X=1024
-        // or X=the smallest power of two smaller than m_superblock
-        m_rank_samples.resize(std::min(1024ULL, 1ULL << bit_magic::l1BP(m_superblockrank.size())));
-    }
-    init_rank_samples();
 }
 
 
