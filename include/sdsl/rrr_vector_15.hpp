@@ -1,18 +1,18 @@
 /* sdsl - succinct data structures library
-    Copyright (C) 2011 Simon Gog
+Copyright (C) 2011 Simon Gog
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see http://www.gnu.org/licenses/ .
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see http://www.gnu.org/licenses/ .
 */
 /*! \file rrr_vector.hpp
    \brief rrr_vector.hpp contains a specialisation of the sdsl::rrr_vector class,
@@ -38,7 +38,7 @@ namespace sdsl
 // Helper class for the binomial coefficients \f$ 15 \choose k \f$
 /*
  * Size of lookup tables:
- *  * m_nr_to_bin: 64 kB = (2^15 entries x 2 bytes) 
+ *  * m_nr_to_bin: 64 kB = (2^15 entries x 2 bytes)
  *  * m_bin_to_nr: 64 kB = (2^15 entries x 2 bytes)
  */
 class binomial15
@@ -50,13 +50,13 @@ class binomial15
         static class impl
         {
             public:
-				static const int n = 15;
+                static const int n = 15;
                 static const int MAX_SIZE=32;
                 uint8_t m_space_for_bt[16];
                 uint8_t m_space_for_bt_pair[256];
                 uint64_t m_C[MAX_SIZE];
-                int_vector<16> m_nr_to_bin;
-                int_vector<16> m_bin_to_nr;
+                std::vector<uint16_t> m_nr_to_bin;
+                std::vector<uint16_t> m_bin_to_nr;
 
                 impl() {
                     m_nr_to_bin.resize(1<<n);
