@@ -26,6 +26,94 @@ namespace sdsl
 namespace util
 {
 
+
+std::string encode_base64(const std::string& txt)
+{
+    return encode_base64(txt.c_str(),txt.length());
+}
+
+
+std::string decode_base64(const std::string& txt)
+{
+    return decode_base64(txt.c_str(),txt.length());
+}
+
+std::string encode_base64(const char* txt,size_t n)
+{
+    // calc result size by adding padding
+    size_t res_size = ((n/3)*4)+4;
+    std::string base64_str;
+    base64_str.resize(res_size);
+    assert(res_size % 4 = 0);
+
+    // process input. 3 ascii symbols become 4 base64 symbols
+    size_t i,j;
+    uint32_t first,second,third,octets;
+    for (i=0,j=0; i<(n-2); i+=3) {
+        first = txt[i]; second = txt[i+1]; third = txt[i+2];
+        octets = (first << 16) + (second << 8) + third;
+        base64_str[j++] = encode_table_base64[(octets >> 18) & 0x3F ];
+        base64_str[j++] = encode_table_base64[(octets >> 12) & 0x3F ];
+        base64_str[j++] = encode_table_base64[(octets >> 6) & 0x3F ];
+        base64_str[j++] = encode_table_base64[ octets & 0x3F ];
+    }
+
+    // padding?
+    first = second = third = 0;
+    switch (n%3) {
+        case 1:
+            first = txt[n-1];
+            octets = (first << 16) + (second << 8) + third;
+            base64_str[j++] = encode_table_base64[(octets >> 18) & 0x3F ];
+            base64_str[j++] = encode_table_base64[(octets >> 12) & 0x3F ];
+            base64_str[j++] = base64_padding_sym;
+            base64_str[j] = base64_padding_sym;
+            break;
+        case 2:
+            first = txt[n-2];
+            second = txt[n-1];
+            octets = (first << 16) + (second << 8) + third;
+            base64_str[j++] = encode_table_base64[(octets >> 18) & 0x3F ];
+            base64_str[j++] = encode_table_base64[(octets >> 12) & 0x3F ];
+            base64_str[j++] = encode_table_base64[(octets >> 6) & 0x3F ];
+            base64_str[j] = base64_padding_sym;
+            break;
+        case 0:
+            // no padding needed
+            j--; // we added one too many symbols before
+            break;
+    }
+    base64_str.resize(j+1);
+    return base64_str;
+}
+
+
+std::string decode_base64(const char* txt,size_t n)
+{
+    assert(n%4 == 0);
+    size_t res_size = n/4 * 3;
+    std::string ascii_str;
+    ascii_str.resize(res_size);
+
+    uint32_t first,second,third,forth;
+    size_t i,j;
+    // decode 4 base64 symbols into 3 ascii symbols
+    for (i=0,j=0; i<n; i+=4) {
+        first = decode_table_base64[(uint8_t)txt[i]];
+        second = decode_table_base64[(uint8_t)txt[i+1]];
+        third = decode_table_base64[(uint8_t)txt[i+2]];
+        forth = decode_table_base64[(uint8_t)txt[i+3]];
+        uint32_t recover = (first << 18) + (second << 12) + (third << 6) + forth;
+
+        ascii_str[j++] = (recover >> 16) & 0xFF;
+        if (txt[i+2] != '=') ascii_str[j++] = (recover >> 8) & 0xFF;
+        if (txt[i+3] != '=') ascii_str[j++] =  recover & 0xFF;
+    }
+    ascii_str.resize(j); // fix the size
+    return ascii_str;
+}
+
+
 uint64_t _id_helper::id = 0;
 
 std::string basename(const std::string& file_name)
@@ -79,11 +167,11 @@ std::string demangle2(const char* name)
             ++i;
         }
     }
-	size_t index = 0;
-	std::string to_replace = "int_vector<1>";
-	while( (index = result.find(to_replace, index)) != string::npos ){
-		result.replace(index, to_replace.size(), "bit_vector");
-	}
+    size_t index = 0;
+    std::string to_replace = "int_vector<1>";
+    while ((index = result.find(to_replace, index)) != string::npos) {
+        result.replace(index, to_replace.size(), "bit_vector");
+    }
     return result;
 }
 
@@ -174,8 +262,9 @@ bool load_from_file(char*& v, const char* file_name)
         return false;
 }
 
-void set_verbose(){
-	verbose = true;
+void set_verbose()
+{
+    verbose = true;
 }
 
 

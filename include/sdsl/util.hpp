@@ -33,7 +33,7 @@
 #include <string.h>    // for strlen and strdup
 #include <libgen.h>    // for basename
 #include <cstdlib>
-#include <unistd.h>    // for getpid 
+#include <unistd.h>    // for getpid
 #include <sstream>     // for to_string method
 #include <stdexcept>   // for std::logic_error
 #include <typeinfo>    // for typeid
@@ -59,6 +59,65 @@ class int_vector;	 // forward declaration
 //! A namespace for helper functions
 namespace util
 {
+
+
+// base64 encoding/decoding constants
+static const uint8_t base64_padding_sym = '=';
+static const uint8_t base64_start_offset = '+';
+
+static const uint8_t encode_table_base64[] = {
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+    'w', 'x', 'y', 'z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9', '+', '/'
+};
+
+
+static const uint8_t decode_table_base64[] = {
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,62,0,0,0,63,
+    52,53,54,55,56,57,58,59,
+    60,61,0,0,0,0,0,0,
+    0,0,1,2,3,4,5,6,
+    7,8,9,10,11,12,13,14,
+    15,16,17,18,19,20,21,22,
+    23,24,25,0,0,0,0,0,
+    0,26,27,28,29,30,31,32,
+    33,34,35,36,37,38,39,40,
+    41,42,43,44,45,46,47,48,
+    49,50,51,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0
+};
+
+
+//! base64 encoding functions
+std::string encode_base64(const std::string& txt);
+std::string encode_base64(const char* txt,size_t n);
+std::string decode_base64(const std::string& txt);
+std::string decode_base64(const char* txt,size_t n);
 
 static bool verbose = false;
 
@@ -237,43 +296,45 @@ void read_member(T& t, std::istream& in)
 template<>
 void read_member<std::string>(std::string& t, std::istream& in);
 
-//! Serialize each element of an std::vector 
+//! Serialize each element of an std::vector
 /*!
  * \param vec	The vector which should be serialized.
  * \param out	Output stream to which should be written.
  * \param v		Structure tree node. Note: If all elements have the same
  *              structure, then it is tried to combine all elements (i.e.
  *              make one node w with size set to the cumulative sum of all
- *              sizes of the children) 
+ *              sizes of the children)
  */
 template<class T>
-size_t serialize_vector(const std::vector<T> &vec, std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name=""){
-	if ( vec.size() > 0 ){
-		sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, "std::vector<"+util::class_name(vec[0])+">" );
-		size_t written_bytes = 0;
-		for (typename std::vector<T>::size_type i = 0; i < vec.size(); ++i ){
-			written_bytes += vec[i].serialize(out, child, "[]");
-		}
-		structure_tree::add_size(child, written_bytes);
-		sdsl::structure_tree::merge_children(child);
-		return written_bytes;
-	}else{
-		return 0;
-	}
+size_t serialize_vector(const std::vector<T> &vec, std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="")
+{
+    if (vec.size() > 0) {
+        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, "std::vector<"+util::class_name(vec[0])+">");
+        size_t written_bytes = 0;
+        for (typename std::vector<T>::size_type i = 0; i < vec.size(); ++i) {
+            written_bytes += vec[i].serialize(out, child, "[]");
+        }
+        structure_tree::add_size(child, written_bytes);
+        sdsl::structure_tree::merge_children(child);
+        return written_bytes;
+    } else {
+        return 0;
+    }
 }
 
 //! Load all elements of a vector from a input stream
 /*! \param vec	Vector whose elements should be loaded.
  *  \param in   Input stream.
  *  \par Note
- *   The vector has to be resized prior the loading 
+ *   The vector has to be resized prior the loading
  *   of its elements.
  */
 template<class T>
-void load_vector(std::vector<T> &vec, std::istream& in){
-	for (typename std::vector<T>::size_type i = 0; i < vec.size(); ++i){
-		vec[i].load(in);
-	}
+void load_vector(std::vector<T> &vec, std::istream& in)
+{
+    for (typename std::vector<T>::size_type i = 0; i < vec.size(); ++i) {
+        vec[i].load(in);
+    }
 }
 
 //! Get the process id of the current process
@@ -376,7 +437,7 @@ template<format_type F, class X>
 void write_structure(const X& x, std::ostream& out)
 {
     structure_tree_node* v = new structure_tree_node();
-	nullstream ns;
+    nullstream ns;
     x.serialize(ns, v, "");
     if (v->children.size() > 0) {
         sdsl::write_structure_tree<F>(v->children[0], out);
@@ -672,4 +733,4 @@ std::string util::to_latex_string(const T& t)
 
 }// end namespace sdsl
 
-#endif // end file 
+#endif // end file
