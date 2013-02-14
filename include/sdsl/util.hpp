@@ -37,7 +37,8 @@
 #include <sstream>     // for to_string method
 #include <stdexcept>   // for std::logic_error
 #include <typeinfo>    // for typeid
-
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // macros to transform a defined name to a string
 #define SDSL_STR(x) #x
@@ -111,6 +112,30 @@ static const uint8_t decode_table_base64[] = {
     0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0
 };
+
+//! A helper class to handle files.
+class file
+{
+    public:
+        //! Read the file with the given file_name
+        /*! \param file_name The file name of the text to read.
+         *  \param c A char pointer which will point to the text that was read.
+         *           New memory is allocated for the text. So free c if read_text
+         *           was successful and c is not needed anymore.
+         *  \param trunc Indicated if the file should be truncated.
+         *  \param lim Maximal number of bytes which are read when trunc is true.
+         *  \return len The number of read bits. If this is zero, now memory is
+         *          allocated for c. And c equals NULL.
+         *  \pre c has to be initialized to NULL.
+         *  \post If len > 0  c[len]=0 and the memory for c was allocated with "new" else c=NULL.
+         */
+        static uint64_t read_text(const char* file_name, char*& c, bool trunc=0, uint64_t lim=0);
+
+        static void write_text(const char* file_name, const char* c, uint64_t len);
+};
+
+
+off_t get_file_size(const char* file_name);
 
 
 //! base64 encoding functions

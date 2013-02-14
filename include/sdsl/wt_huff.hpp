@@ -561,6 +561,7 @@ class wt_huff
         size_type rank(size_type i, value_type c)const {
             uint64_t p = m_path[c];
             uint32_t path_len = (m_path[c]>>56); // equals zero if char was not present in the original text or m_sigma=1
+
             if (!path_len and 1 == m_sigma) {    // if m_sigma == 1 return result immediately
                 if (m_c_to_leaf[c] == _undef_node) { // if character does not exist return 0
                     return 0;
@@ -580,6 +581,46 @@ class wt_huff
             }
             return result;
         };
+
+
+
+        //! Calculates how many symbols c are in the prefix [0..i-1] of the supported vector.
+        /*!
+         *  \param i The exclusive index of the prefix range [0..i-1], so \f$i\in[0..size()]\f$.
+         *  \param c The symbol to count the occurrences in the prefix.
+         *  \return The number of occurrences of symbol c in the prefix [0..i-1] of the supported vector.
+         *  \par Time complexity
+         *      \f$ \Order{H_0} \f$
+         */
+        void ranks(size_type i,size_type j, value_type c,size_type& res_i,size_type& res_j) const {
+            uint64_t p = m_path[c];
+            uint32_t path_len = (m_path[c]>>56); // equals zero if char was not present in the original text or m_sigma=1
+            if (!path_len and 1 == m_sigma) {    // if m_sigma == 1 return result immediately
+                if (m_c_to_leaf[c] == _undef_node) { // if character does not exist return 0
+                    res_i = 0; res_j=0;
+                    return;
+                }
+                res_i = std::min(i, m_size);
+                res_j = std::min(j, m_size);
+                return;
+            }
+            res_i = i & ZoO[path_len>0]; // important: result has type size_type and ZoO has type size_type
+            res_j = j & ZoO[path_len>0]; // important: result has type size_type and ZoO has type size_type
+            uint32_t node=0;
+            for (uint32_t l=0; l<path_len; ++l, p >>= 1) {
+                if (p&1) {
+                    res_i  = (m_tree_rank(m_nodes[node].tree_pos+res_i) -  m_nodes[node].tree_pos_rank);
+                    res_j  = (m_tree_rank(m_nodes[node].tree_pos+res_j) -  m_nodes[node].tree_pos_rank);
+                } else {
+                    res_i -= (m_tree_rank(m_nodes[node].tree_pos+res_i) -  m_nodes[node].tree_pos_rank);
+                    res_j -= (m_tree_rank(m_nodes[node].tree_pos+res_j) -  m_nodes[node].tree_pos_rank);
+                }
+                node = m_nodes[node].child[p&1]; // goto child
+            }
+        };
+
+
+
 
         //! Calculates how many occurrences of symbol wt[i] are in the prefix [0..i-1] of the original sequence.
         /*!
@@ -751,4 +792,4 @@ typedef wt_huff<rrr_vector<>,
 
 }// end namespace sdsl
 
-#endif // end file 
+#endif // end file

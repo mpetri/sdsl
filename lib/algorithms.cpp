@@ -15,6 +15,7 @@
     along with this program.  If not, see http://www.gnu.org/licenses/ .
 */
 #include "sdsl/algorithms.hpp"
+#include "sdsl/int_vector.hpp"
 #include <cstring>
 #include <cmath>
 #include <map>

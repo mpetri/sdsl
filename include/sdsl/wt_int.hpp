@@ -393,6 +393,43 @@ class wt_int
             return i;
         };
 
+
+        //TODO: buchstaben, die nicht im orginaltext vorkommen behandeln!!!
+        //! Calculates how many symbols c are in the prefix [0..i-1] of the supported vector.
+        /*!
+         *  \param i The exclusive index of the prefix range [0..i-1], so \f$i\in[0..size()]\f$.
+         *  \param c The symbol to count the occurences in the prefix.
+         *  \returns The number of occurences of symbol c in the prefix [0..i-1] of the supported vector.
+         *  \par Time complexity
+         *      \f$ \Order{\log |\Sigma|} \f$
+         */
+        void ranks(size_type i,size_type j, value_type c,size_type& res_i,size_type& res_j) const {
+            size_type offset = 0;
+            uint64_t mask    = (1ULL) << (m_logn-1);
+            size_type node_size = m_size;
+            for (uint32_t k=0; k < m_logn and i; ++k) {
+                size_type ones_before_o   = m_tree_rank(offset);
+                size_type ones_before_i   = m_tree_rank(offset + i) - ones_before_o;
+                size_type ones_before_j   = m_tree_rank(offset + j) - ones_before_o;
+                size_type ones_before_end = m_tree_rank(offset + node_size) - ones_before_o;
+                if (c & mask) { // search for a one at this level
+                    offset += (node_size - ones_before_end);
+                    node_size = ones_before_end;
+                    i = ones_before_i;
+                    j = ones_before_j;
+                } else { // search for a zero at this level
+                    node_size = (node_size - ones_before_end);
+                    i = (i-ones_before_i);
+                    j = (j-ones_before_j);
+                }
+                offset += m_size;
+                mask >>= 1;
+            }
+            res_i = i; res_j = j;
+        };
+
+
+
         //! Calculates the ith occurence of the symbol c in the supported vector.
         /*!
          *  \param i The ith occurence. \f$i\in [1..rank(size(),c)]\f$.
@@ -569,4 +606,4 @@ class wt_int
 
 }// end namespace sds
 
-#endif // end file 
+#endif // end file

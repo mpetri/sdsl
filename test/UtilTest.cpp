@@ -1,6 +1,7 @@
 #include "sdsl/int_vector.hpp"
 #include "sdsl/bitmagic.hpp"
 #include "sdsl/util.hpp"
+#include "sdsl/testutils.hpp"
 #include "gtest/gtest.h"
 #include <vector>
 #include <cstdlib> // for rand()
@@ -40,6 +41,17 @@ TEST(UtilTest, base64_encodedecode)
         }
         ASSERT_STREQ(str.c_str() ,  util::decode_base64(util::encode_base64(str)).c_str());
     }
+}
+
+
+TEST(TestUtilTest, generate_patterns)
+{
+    std::string test_cases_case = std::string(SDSL_XSTR(CMAKE_SOURCE_DIR)) + "/test/test_cases" + "/small/faust.txt";
+    pattern_file p;
+
+    p.generate(test_cases_case,20,5);
+
+
 }
 
 int main(int argc, char** argv)

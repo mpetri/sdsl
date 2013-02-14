@@ -28,6 +28,10 @@
 #include <xmmintrin.h>
 #endif
 
+
+#include <stdio.h>
+
+
 //! Namespace for the succinct data structure library.
 namespace sdsl
 {
@@ -302,6 +306,9 @@ class bit_magic
         	\pre Argument i must be in the range \f$[1..b1Cnt(x)]\f$.
           	\sa l1BP, r1BP
          */
+        static uint32_t i1BP_sse(uint64_t x, uint32_t i);
+        static uint32_t i1BP_table(uint64_t x, uint32_t i);
+        static uint32_t i1BP_bw(uint64_t x, uint32_t i);
         static uint32_t i1BP(uint64_t x, uint32_t i);
         static uint32_t i1BP2(uint64_t x, uint32_t i);
 
@@ -1112,38 +1119,92 @@ inline uint32_t bit_magic::k1BP(uint64_t x, uint32_t i)
 }
 
 
-inline uint32_t bit_magic::i1BP(uint64_t x, uint32_t i)
+inline uint32_t bit_magic::i1BP_sse(uint64_t x, uint32_t i)
 {
-#ifdef __SSE4_2__
-//__m64 v;
-//v = (__m64)x;
-//const __m64 mask_
     uint64_t s = x, b;
     s = s-((s>>1) & 0x5555555555555555ULL);
     s = (s & 0x3333333333333333ULL) + ((s >> 2) & 0x3333333333333333ULL);
     s = (s + (s >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
     s = 0x0101010101010101ULL*s;
-// now s contains 8 bytes s[7],...,s[0], s[i] contains the cumulative sum
-// off (i+1)*8 least significant bits of s
     b = (s+PsOverflow[i]) & 0x8080808080808080ULL;
-// PsOverflow contains a bit mask x consisting of 8 bytes
-// x[7],...,x[0] and x[i] is set to 128-i
-// => a byte b[i] in b is >= 128 if cum sum >= i
-
-// __builtin_ctzll returns the number of trailing zeros, if b!=0
-    int  byte_nr = __builtin_ctzll(b) >> 3;   // byte nr in [0..7]
-//      b = _mm_movemask_pi8( (__m64)~b );
-//      std::cout << "byte_nr = " << byte_nr << " ";
-    /*! Entry at idx = 256*j + i equals the position of the
-    	  (j+1)-th leftmost 1 bit in the integer i. Positions lie in the range \f$[0..7]\f$.
-    					   */
+    int  byte_nr = __builtin_ctzll(b) >> 3;
     s <<= 8;
     i -= (s >> (byte_nr<<3)) & 0xFFULL;
-//i -= ((uint8_t*)&s)[byte_nr];
-//      std::cout << "i = " << i << std::endl;
     return (byte_nr << 3) + Select256[((i-1) << 8) + ((x>>(byte_nr<<3))&0xFFULL) ];
+}
+
+inline uint32_t bit_magic::i1BP_table(uint64_t x, uint32_t i)
+{
+    //sequential search using popcount over a char
+    uint32_t pos = 0;
+    uint32_t rankmid = B1CntBytes[x&0xFFULL];
+
+    if (rankmid < i) {
+        x=x>>8;
+        i-=rankmid;
+        pos+=8;
+        rankmid = B1CntBytes[x&0xFFULL];
+        if (rankmid < i) {
+            x=x>>8;
+            i-=rankmid;
+            pos+=8;
+            rankmid = B1CntBytes[x&0xFFULL];
+            if (rankmid < i) {
+                x=x>>8;
+                i-=rankmid;
+                pos+=8;
+            }
+        }
+    }
+    // then sequential search bit a bit
+    while (i>0) {
+        if (x&1) i--;
+        x=x>>1;
+        pos++;
+    }
+    return pos-1;
+}
+
+#define ZCOMPARE_STEP_8(x) ( ( ( x | ( ( x | (0x80ULL*0x0101010101010101ULL) ) - 0x0101010101010101ULL ) ) & (0x80ULL*0x0101010101010101ULL) ) >> 7 )
+#define LEQ_STEP_8(x,y) ( ( ( ( ( (y) | (0x80ULL*0x0101010101010101ULL) ) - ( (x) & ~(0x80ULL*0x0101010101010101ULL) ) ) ^ (x) ^ (y) ) & (0x80ULL*0x0101010101010101ULL) ) >> 7 )
+
+
+inline uint32_t bit_magic::i1BP_bw(uint64_t w, uint32_t k)
+{
+    k--;
+    // Phase 1: sums by byte
+    register uint64_t byte_sums = w - ((w & 0xa * 0x1111111111111111ULL) >> 1);
+    byte_sums = (byte_sums & 3 * 0x1111111111111111ULL) + ((byte_sums >> 2) & 3 * 0x1111111111111111ULL);
+    byte_sums = (byte_sums + (byte_sums >> 4)) & 0x0f * 0x0101010101010101ULL;
+    byte_sums *= 0x0101010101010101ULL;
+    // Phase 2: compare each byte sum with k
+    const uint64_t k_step_8 = k * 0x0101010101010101ULL;
+    const uint64_t place = (LEQ_STEP_8(byte_sums, k_step_8) * 0x0101010101010101ULL >> 53) & ~0x7;
+    // Phase 3: Locate the relevant byte and make 8 copies with incrental masks
+    const int byte_rank = k - (((byte_sums << 8) >> place) & 0xFF);
+    const uint64_t spread_bits = (w >> place & 0xFF) * 0x0101010101010101ULL &
+                                 (0x80ULL << 56 | 0x40ULL << 48 | 0x20ULL << 40 | 0x10ULL << 32 | 0x8ULL << 24 | 0x4ULL << 16 | 0x2ULL << 8 | 0x1);
+    const uint64_t bit_sums = ZCOMPARE_STEP_8(spread_bits) * 0x0101010101010101ULL;
+    // Compute the inside-byte location and return the sum
+    const uint64_t byte_rank_step_8 = byte_rank * 0x0101010101010101ULL;
+    return place + (LEQ_STEP_8(bit_sums, byte_rank_step_8) * 0x0101010101010101ULL >> 56);
+}
+
+inline uint32_t bit_magic::i1BP(uint64_t x, uint32_t i)
+{
+#ifdef POP_SSE
+    return i1BP_sse(x,i);
 #endif
-    return i1BP2(x, i);
+#ifdef POP_TABLE
+    return i1BP_table(x,i);
+#endif
+#ifdef POP_BW
+    return i1BP_bw(x,i);
+#endif
+#ifdef __SSE4_2__
+    return i1BP_sse(x,i);
+#endif
+    return i1BP2(x,i);
 }
 
 

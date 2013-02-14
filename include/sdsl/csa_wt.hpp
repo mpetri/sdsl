@@ -525,6 +525,18 @@ class csa_wt
             return m_wavelet_tree.rank(i, c);
         }
 
+        //! Calculates how many symbols c are in the prefix [0..i-1] of the BWT of the original text.
+        /*!
+         *  \param i The exclusive index of the prefix range [0..i-1], so \f$i\in [0..size()]\f$.
+         *  \param c The symbol to count the occurences in the prefix.
+         *  \returns The number of occurences of symbol c in the prefix [0..i-1] of the BWT.
+         *  \par Time complexity
+         *      \f$ \Order{\log |\Sigma|} \f$
+         */
+        void ranks_bwt(size_type i, size_type j, const char_type c,size_type& res_i,size_type& res_j) const {
+            return m_wavelet_tree.ranks(i,j,c,res_i,res_j);
+        }
+
         //! Calculates the ith occurrence of symbol c in the BWT of the original text.
         /*!
          *  \param i The ith occurrence. \f$i\in [1..rank(size(),c)]\f$.

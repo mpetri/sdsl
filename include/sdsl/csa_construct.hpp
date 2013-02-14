@@ -55,8 +55,10 @@ static bool construct_csa(std::string file_name, Csa& csa, tMSS& file_map, bool 
         if (id == "")
             id =  util::to_string(util::get_pid())+"_"+util::to_string(util::get_id()).c_str();
         if (fs != n + 1) {
-            std::cerr << "# WARNING: file \"" << file_name << "\" contains 0-bytes." << std::endl;
-            algorithm::shift_text((char*)ccc, fs, true);
+            std::cerr << "# WARNING: file \"" << file_name << "\" of size " << fs << " contains 0-bytes." << std::endl;
+            for (size_t i=0; i<fs; i++) {
+                if (ccc[i] == 0) ccc[i] = 1;
+            }
             n = fs-1;
         }
 

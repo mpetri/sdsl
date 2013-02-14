@@ -23,14 +23,13 @@
 
 #include <sys/mman.h>
 
-#define HUGE_LEN 1073741824 
+#define HUGE_LEN 1073741824
 #define HUGE_PROTECTION (PROT_READ | PROT_WRITE)
 #define HUGE_FLAGS (MAP_HUGETLB | MAP_ANONYMOUS | MAP_PRIVATE)
 
 #include "compatibility.hpp"
 #include "bitmagic.hpp"
 #include "util.hpp"
-#include "testutils.hpp"
 #include "uintx_t.hpp"
 #include "structure_tree.hpp"
 
@@ -49,7 +48,6 @@
 #include <ostream>
 #include <istream>
 #include <string>
-
 
 
 //! Namespace for the succinct data structure library.
@@ -101,6 +99,8 @@ class select_support_bs;
 
 template<uint8_t bit_pattern, uint8_t pattern_len> // forward declaration
 class select_support_mcl;
+
+class pattern_file;
 
 namespace coder
 {
@@ -339,7 +339,7 @@ class int_vector
         friend class  coder::fibonacci;
         friend class  coder::ternary;
         friend class  int_vector_file_buffer<fixedIntWidth, size_type_class>;
-		friend class mm_item<int_vector>;
+        friend class mm_item<int_vector>;
         //! Operator to create an int_vector<1> (aka bit_vector) from an input stream.
         friend std::istream& operator>>(std::istream&, int_vector<1>&);
         friend void util::set_random_bits<int_vector>(int_vector& v, int);
@@ -1093,7 +1093,7 @@ inline std::istream& operator>>(std::istream &in, int_vector<1> &v){
 template<uint8_t fixedIntWidth, class size_type_class>
 inline int_vector<fixedIntWidth,size_type_class>::int_vector(size_type elements, value_type default_value, uint8_t intWidth):m_size(0), m_data(NULL), m_int_width(intWidth)
 {
-	mm::add( this );
+    mm::add(this);
     int_vector_trait<fixedIntWidth,size_type_class>::set_int_width(m_int_width, intWidth);
     resize(elements);
     if (default_value == 0) {
@@ -1108,7 +1108,7 @@ inline int_vector<fixedIntWidth,size_type_class>::int_vector(size_type elements,
 template<uint8_t fixedIntWidth, class size_type_class>
 inline int_vector<fixedIntWidth,size_type_class>::int_vector(const int_vector& v):m_size(0), m_data(NULL), m_int_width(v.m_int_width)
 {
-	mm::add( this );
+    mm::add(this);
     bit_resize(v.bit_size());
     if (v.capacity() > 0) {
         if (memcpy(m_data, v.data() ,v.capacity()/8)==NULL) {
@@ -1138,7 +1138,7 @@ int_vector<fixedIntWidth,size_type_class>& int_vector<fixedIntWidth,size_type_cl
 template<uint8_t fixedIntWidth, class size_type_class>
 int_vector<fixedIntWidth,size_type_class>::~int_vector()
 {
-	mm::remove( this );
+    mm::remove(this);
     if (m_data != NULL) {
         free(m_data); //fixed delete
     }
@@ -1208,7 +1208,7 @@ inline void int_vector<fixedIntWidth,size_type_class>::setBit(size_type idx,cons
     if (value) {
         m_data[int64_idx] |= 1ULL << idx;
     } else {
-        m_data[int64_idx] &= (bit_magic::All1Mask ^ (1ULL << idx));
+        m_data[int64_idx] &= (bit_magic::All1Mask ^(1ULL << idx));
     }
 }
 
@@ -1661,7 +1661,7 @@ class int_vector_file_buffer
             int_vector_trait<fixedIntWidth, size_type_class>::set_int_width(m_int_width, int_width);
             m_len = len;
             m_file_name = f_file_name;
-            m_int_vector_size = get_file_size(m_file_name.c_str());
+            m_int_vector_size = util::get_file_size(m_file_name.c_str());
             m_in.open(m_file_name.c_str(), std::ifstream::in);
             if (m_in.is_open()) {
                 m_buf = new uint64_t[(m_len*m_int_width+63)/64 + 2];
@@ -1682,7 +1682,7 @@ class int_vector_file_buffer
             if (!m_load_from_plain) {
                 load_size_and_width();
             } else {
-                m_int_vector_size = get_file_size(m_file_name.c_str());
+                m_int_vector_size = util::get_file_size(m_file_name.c_str());
             }
             if (new_buf_len > 0 and new_buf_len != m_len) {
                 if (m_buf != NULL)
@@ -1780,4 +1780,4 @@ inline int_vector_file_buffer<8, uint32_t>::reference int_vector_file_buffer<8, 
 
 }// end namespace sdsl
 
-#endif // end file 
+#endif // end file

@@ -19,7 +19,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <unistd.h> // for get_file_size, also contains clock_gettime 
+#include <unistd.h> // for get_file_size, also contains clock_gettime
 #include <sys/types.h> // for get_file_size
 #include <sys/stat.h>  // for get_file_size
 
@@ -105,84 +105,63 @@ std::string clock::get_time_string()
     return buffer;
 }
 
-off_t get_file_size(const char* file_name)
+
+pattern_file::size_type
+pattern_file::generate(const char* text_file_name, size_type pattern_cnt, size_type pattern_len)
 {
-    struct stat filestatus;
-    stat(file_name, &filestatus);
-    return filestatus.st_size;
+    char* text = NULL;
+    size_t n = util::file::read_text(text_file_name,text);
+
+    m_pattern_cnt = pattern_cnt;
+    m_pattern_len = pattern_len;
+
+    char* buf = new char[pattern_len+1];
+    size_t j=0;
+    m_patterns.resize(m_pattern_cnt);
+    for (size_type i=0; j<pattern_cnt; i++) {
+        size_type pos = rand() % (n-pattern_len);
+        strncpy(buf,(const char*)(text+pos),pattern_len);
+        buf[pattern_len-1] = 0;
+
+        if (strlen(buf) == pattern_len) {
+            m_patterns[i] = buf;
+            j++;
+        }
+    }
+    delete [] buf;
+    delete [] text;
+    return m_pattern_cnt;
 }
 
 
-void file::write_text(const char* file_name, const char* c, uint64_t len)
+pattern_file::size_type
+pattern_file::serialize(std::ostream& out, structure_tree_node*, std::string) const
 {
-    std::ofstream out(file_name);
-    if (out) {
-        out.write(c, len);
-        out.close();
+    out << "num_patterns=" << m_pattern_cnt << std::endl;
+    out << "pattern_len=" << m_pattern_len << std::endl;
+
+    for (size_t i=0; i<m_pattern_cnt; i++) {
+        out << util::encode_base64(m_patterns[i]) << std::endl;
     }
+    return m_pattern_cnt*m_pattern_len;
 }
 
-uint64_t file::read_text(const char* file_name, char*& c, bool trunc, uint64_t lim)
+void
+pattern_file::load(std::istream& in)
 {
-    if (c != NULL) {
-        delete [] c;
-        c = NULL;
-    }
-    uint64_t n = get_file_size(file_name) + 1; // add one for the 0 byte
-    if (trunc and lim+1 < n) {
-        n = lim+1;
-    }
-//std::cerr<<"file has size "<< n <<std::endl;
-    std::ifstream in;
-    in.open(file_name);
-    if (in) {
-        c = new char[n];
-        c[n-1] = '\0';
-        char* cp = c;
-        in.read(cp, n-1);
-        if (n > 1 and c[n-2] == 0)
-            return n-1; // last byte was already a null byte
-        else
-            return n; // added 0 byte
-    }
-    return 0;
-    /*
-    	std::ifstream in;
-    	in.open(file_name);
-    	if( in ){
-    		const uint64_t BLOCK_SIZE = (1<<20);
-    		uint64_t n=0, read = 0;
-    		char buf[BLOCK_SIZE], *cp;
-    		do{
-    			in.read(buf, BLOCK_SIZE);
-    			read = in.gcount();
-    			n+=read;
-    		}while( BLOCK_SIZE == read );
-    		if(n==0)
-    			return 0;
-    		c = new char[n+2+BLOCK_SIZE]; //TODO checken warum das nicht gut ist
-    //		*(c+(n+1)) = 0;
-    		in.close();
-    		in.open(file_name);
-    		if(!in){
-    			delete [] c;
-    			c = NULL;
-    			return 0;
-    		}
-    		cp=c;
-    		do{
-    			in.read(cp, BLOCK_SIZE);
-    			read = in.gcount();
-    			cp+= read;
-    		}while( BLOCK_SIZE == read );
-    		*(c+n) = '\0';
-    		return n;
-    	}
-    	else
-    		return 0;
-    */
-}
+    std::string buf;
+    /* parse args argument */
+    std::getline(in,buf);
+    sscanf(buf.c_str(),"num_patterns=%ld",&m_pattern_cnt);
+    std::getline(in,buf);
+    sscanf(buf.c_str(),"pattern_len=%ld",&m_pattern_len);
 
+    m_patterns.resize(m_pattern_cnt);
+    for (size_t i=0; i<m_pattern_cnt; i++) {
+        std::getline(in,buf);
+        m_patterns[i] = util::decode_base64(buf);
+    }
+}
 
 
 } // end of namespace sdsl

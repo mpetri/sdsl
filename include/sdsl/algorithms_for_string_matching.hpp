@@ -74,6 +74,28 @@ static typename Csa::csa_size_type backward_search(
     return r_res+1-l_res;
 }
 
+template<class Csa>
+static typename Csa::csa_size_type backward_search_s(
+    const Csa& csa,
+    typename Csa::size_type l,
+    typename Csa::size_type r,
+    typename Csa::char_type c,
+    typename Csa::size_type& l_res,
+    typename Csa::size_type& r_res
+)
+{
+    assert(l <= r); assert(r < csa.size());
+    typename Csa::size_type c_begin = csa.C[csa.char2comp[c]];
+
+    // perform rank
+    size_t res_l,res_r;
+    csa.ranks_bwt(l,r+1,c,res_l,res_r);
+    l_res = c_begin + res_l; // count c in bwt[0..l-1]
+    r_res = c_begin + res_r - 1; // count c in bwt[0..r]
+    assert(r_res+1-l_res >= 0);
+    return r_res+1-l_res;
+}
+
 //! Backward search for a pattern pat on an interval \f$[\ell..r]\f$ of the suffix array.
 /*!
  * \param csa The csa in which the backward_search should be done.
@@ -104,6 +126,19 @@ static typename Csa::csa_size_type backward_search(const Csa& csa, typename Csa:
     return r_res+1-l_res;
 }
 
+template<class Csa>
+static typename Csa::csa_size_type backward_search_s(const Csa& csa, typename Csa::size_type l,
+        typename Csa::size_type r, typename Csa::pattern_type pat,
+        typename Csa::size_type len, typename Csa::size_type& l_res, typename Csa::size_type& r_res)
+{
+    typename Csa::size_type i = 0;
+    l_res = l; r_res = r;
+    while (i < len and backward_search_s(csa, l_res, r_res, pat[len-i-1], l_res, r_res)) {
+        ++i;
+    }
+    return r_res+1-l_res;
+}
+
 // TODO: forward search. Include original text???
 
 //! Counts the number of occurences of pattern pat in the string of the compressed suffix array csa.
@@ -123,6 +158,15 @@ static typename Csa::csa_size_type count(const Csa& csa, typename Csa::pattern_t
         return 0;
     typename Csa::size_type t1,t2; t1=t2=0; // dummy varaiable for the backward_search call
     return backward_search(csa, 0, csa.size()-1, pat, len, t1, t2);
+}
+
+template<class Csa>
+static typename Csa::csa_size_type count_s(const Csa& csa, typename Csa::pattern_type pat, typename Csa::size_type len)
+{
+    if (len > csa.size())
+        return 0;
+    typename Csa::size_type t1,t2; t1=t2=0; // dummy varaiable for the backward_search call
+    return backward_search_s(csa, 0, csa.size()-1, pat, len, t1, t2);
 }
 
 //! Calculates all occurences of pattern pat in the string of the compressed suffix array csa.
@@ -274,7 +318,7 @@ typename Cst::cst_size_type forward_search(const Cst& cst, typename Cst::node_ty
     if (len==0)
         return cst.leaves_in_the_subtree(v);
     typename Cst::size_type i=0, size=0;
-    while (i < len and (size=forward_search(cst, v, d, pat[i], char_pos))) {
+    while (i < len and(size=forward_search(cst, v, d, pat[i], char_pos))) {
         ++d;
         ++i;
     }

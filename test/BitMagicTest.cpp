@@ -52,6 +52,8 @@ TEST_F(BitMagicTest, Select)
 {
     for (size_type i=0; i<64; ++i) {
         ASSERT_EQ(sdsl::bit_magic::i1BP(1ULL<<i, 1), i);
+        ASSERT_EQ(sdsl::bit_magic::i1BP_bw(1ULL<<i, 1), i);
+        ASSERT_EQ(sdsl::bit_magic::i1BP_table(1ULL<<i, 1), i);
         ASSERT_EQ(sdsl::bit_magic::j1BP(1ULL<<i, 1), i);
         ASSERT_EQ(sdsl::bit_magic::k1BP(1ULL<<i, 1), i);
     }
@@ -61,6 +63,8 @@ TEST_F(BitMagicTest, Select)
             if ((x >> j)&1) {
                 ++ones;
                 ASSERT_EQ(sdsl::bit_magic::i1BP(x, ones), j);
+                ASSERT_EQ(sdsl::bit_magic::i1BP_bw(x, ones), j);
+                ASSERT_EQ(sdsl::bit_magic::i1BP_table(x, ones), j);
                 ASSERT_EQ(sdsl::bit_magic::j1BP(x, ones), j);
                 ASSERT_EQ(sdsl::bit_magic::k1BP(x, ones), j);
             }

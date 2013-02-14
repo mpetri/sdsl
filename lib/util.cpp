@@ -26,6 +26,47 @@ namespace sdsl
 namespace util
 {
 
+off_t get_file_size(const char* file_name)
+{
+    struct stat filestatus;
+    stat(file_name, &filestatus);
+    return filestatus.st_size;
+}
+
+
+void file::write_text(const char* file_name, const char* c, uint64_t len)
+{
+    std::ofstream out(file_name);
+    if (out) {
+        out.write(c, len);
+        out.close();
+    }
+}
+
+uint64_t file::read_text(const char* file_name, char*& c, bool trunc, uint64_t lim)
+{
+    if (c != NULL) {
+        delete [] c;
+        c = NULL;
+    }
+    uint64_t n = get_file_size(file_name) + 1; // add one for the 0 byte
+    if (trunc and lim+1 < n) {
+        n = lim+1;
+    }
+    std::ifstream in;
+    in.open(file_name);
+    if (in) {
+        c = new char[n];
+        c[n-1] = '\0';
+        char* cp = c;
+        in.read(cp, n-1);
+        if (n > 1 and c[n-2] == 0)
+            return n-1; // last byte was already a null byte
+        else
+            return n; // added 0 byte
+    }
+    return 0;
+}
 
 std::string encode_base64(const std::string& txt)
 {

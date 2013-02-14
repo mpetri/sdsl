@@ -29,8 +29,16 @@
 #include <iostream>
 #include <string>
 
+#include "int_vector.hpp"
+
+using namespace std;
+using namespace sdsl;
+
 namespace sdsl
 {
+
+//template<uint8_t, class size_type_class>
+//class int_vector;    // forward declaration
 
 //! A helper class to meassure the time consumption of program pieces.
 /*! stop_watch is a stopwatch based on the commands getrusage and
@@ -124,30 +132,111 @@ class clock
         static std::string get_time_string();
 };
 
-//! Get the size of a file in bytes
-off_t get_file_size(const char* file_name);
 
-
-//! A helper class to handle files.
-class file
+class pattern_file
 {
     public:
-        //! Read the file with the given file_name
-        /*! \param file_name The file name of the text to read.
-         *  \param c A char pointer which will point to the text that was read.
-         *           New memory is allocated for the text. So free c if read_text
-         *           was successful and c is not needed anymore.
-         *  \param trunc Indicated if the file should be truncated.
-         *  \param lim Maximal number of bytes which are read when trunc is true.
-         *	\return len The number of read bits. If this is zero, now memory is
-         *          allocated for c. And c equals NULL.
-         *  \pre c has to be initialized to NULL.
-         *  \post If len > 0  c[len]=0 and the memory for c was allocated with "new" else c=NULL.
-         */
-        static uint64_t read_text(const char* file_name, char*& c, bool trunc=0, uint64_t lim=0);
-
-        static void write_text(const char* file_name, const char* c, uint64_t len);
+        typedef bit_vector::size_type size_type;
+    private:
+        size_type m_pattern_cnt;
+        size_type m_pattern_len;
+        vector<std::string> m_patterns;
+    public:
+        pattern_file();
+        size_type generate(const char* text_file_name, size_type pattern_cnt, size_type pattern_len);
+        template<class tCst>
+        void generate_restricted(const tCst& cst, const char* text_file_name, size_type pattern_cnt,
+                                 size_type pattern_len, size_type min_occ, size_type max_occ);
+        size_type serialize(std::ostream& out, structure_tree_node* v=NULL, std::string name="") const;
+        void load(std::istream& in);
+        size_type num_patterns() {
+            return m_pattern_cnt;
+        };
+        size_type pattern_length() {
+            return m_pattern_len;
+        };
+        const char* operator[](size_type i) const;
 };
+
+
+template<class tCst>
+void pattern_file::generate_restricted(const tCst& cst, const char* text_file_name, size_type pattern_cnt,
+                                       size_type pattern_len, size_type min_occ, size_type max_occ)
+{
+    typedef typename tCst::node_type node_type;
+    m_pattern_cnt = pattern_cnt;
+    m_pattern_len = pattern_len;
+
+    vector<size_type> candidates;
+    for (typename tCst::const_iterator it = cst.begin(), end=cst.end(); it!=end; ++it) {
+        if (it.visit() == 1) {
+            node_type v = *it;
+            if (cst.depth(v) >= pattern_len) {  // if the depth >= pattern_len we determine
+                // if min_occ <= occ <= max_occ
+                size_type occ = cst.leaves_in_the_subtree(v);
+                if (min_occ <= occ and occ <= max_occ) {
+                    candidates.push_back(cst.lb(v));
+                }
+                it.skip_subtree();
+            } else { // if the depth < pattern_len we process the subtree
+                // if the subtree size is to small we don't process the subtree
+                if (min_occ > cst.leaves_in_the_subtree(v)) {
+                    it.skip_subtree();
+                }
+            }
+        }
+    }
+    sdsl::bit_vector already_used(candidates.size(), 0);
+
+    if (candidates.size() == 0) {
+        m_pattern_cnt = 0;
+        std::cerr << "Found no candidates for pattern_len = "<< pattern_len << std::endl;
+        std::cerr << "min_occ = "<< min_occ << " and max_occ = " << max_occ << std::endl;
+    } else if (candidates.size() < 100) {
+        std::cerr << "Less then 100 candidates for pattern_len = " << pattern_len << std::endl;
+        std::cerr << "min_occ = "<< min_occ << " and max_occ = " << max_occ << std::endl;
+    } else {
+        std::cerr << candidates.size() << " candidates for pattern_len = " << pattern_len << std::endl;
+        std::cerr << "min_occ = "<< min_occ << " and max_occ = " << max_occ << std::endl;
+    }
+
+
+    m_patterns.resize(m_pattern_cnt);
+    if (candidates.size() > 0) {
+        char* pattern_buf = new char[pattern_len+1];
+        pattern_buf[pattern_len] = '\0';
+        ifstream text_stream(text_file_name);
+        if (text_stream) {
+            for (size_type i=0, j, k; i < pattern_cnt; ++i) {
+                j=rand()%candidates.size();
+                if (already_used[j]) {
+                    // find next free location
+                    size_type j1=j+1;
+                    while (j1 < already_used.size() and already_used[j1]) {
+                        ++j1;
+                    }
+                    if (j1 >= already_used.size()) {
+                        j1 = j;
+                    }
+                    j = j1;
+                }
+                k = cst.csa[ candidates[j] ];
+                // extract the pattern
+                text_stream.seekg(k ,std::ios::beg);
+                text_stream.read(pattern_buf, pattern_len);
+
+                m_patterns[i] = std::string(pattern_buf);
+                already_used[j] = 1;
+            }
+            text_stream.close();
+        } else {
+            std::cerr << "ERROR: Could not open text file " << text_file_name << endl;
+        }
+        delete [] pattern_buf;
+    }
+
+    return m_pattern_cnt;
+}
 
 } // end of namespace sdsl
 
