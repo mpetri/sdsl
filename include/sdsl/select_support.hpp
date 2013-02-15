@@ -28,6 +28,7 @@
 #include "int_vector.hpp"
 #include "rank_support.hpp"
 
+
 //! Namespace for the succinct data structure library.
 namespace sdsl
 {

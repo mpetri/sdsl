@@ -23,40 +23,40 @@
 
 #include "int_vector.hpp"
 #include "select_support.hpp"
-
+#include <algorithm>
 //#define SDSL_DEBUG_SELECT_SUPPORT_JMC
 
 #ifdef SDSL_DEBUG_select_support_v9
 #include "testutils.hpp"
 #endif
 
-#define ONES_PER_INVENTORY (512)
-#define LOG2_ONES_PER_INVENTORY (9)
-#define INVENTORY_MASK (ONES_PER_INVENTORY-1)
+#define V9_ONES_PER_INVENTORY (512)
+#define V9_LOG2_ONES_PER_INVENTORY (9)
+#define V9_INVENTORY_MASK (V9_ONES_PER_INVENTORY-1)
 
-#define ONES_STEP_4 ( 0x1111111111111111ULL )
-#define ONES_STEP_8 ( 0x0101010101010101ULL )
-#define ONES_STEP_9 ( 1ULL << 0 | 1ULL << 9 | 1ULL << 18 | 1ULL << 27 | 1ULL << 36 | 1ULL << 45 | 1ULL << 54 )
-#define ONES_STEP_16 ( 1ULL << 0 | 1ULL << 16 | 1ULL << 32 | 1ULL << 48 )
-#define MSBS_STEP_4 ( 0x8ULL * ONES_STEP_4 )
-#define MSBS_STEP_8 ( 0x80ULL * ONES_STEP_8 )
-#define MSBS_STEP_9 ( 0x100ULL * ONES_STEP_9 )
-#define MSBS_STEP_16 ( 0x8000ULL * ONES_STEP_16 )
-#define INCR_STEP_8 ( 0x80ULL << 56 | 0x40ULL << 48 | 0x20ULL << 40 | 0x10ULL << 32 | 0x8ULL << 24 | 0x4ULL << 16 | 0x2ULL << 8 | 0x1 )
+#define V9_ONES_STEP_4 ( 0x1111111111111111ULL )
+#define V9_ONES_STEP_8 ( 0x0101010101010101ULL )
+#define V9_ONES_STEP_9 ( 1ULL << 0 | 1ULL << 9 | 1ULL << 18 | 1ULL << 27 | 1ULL << 36 | 1ULL << 45 | 1ULL << 54 )
+#define V9_ONES_STEP_16 ( 1ULL << 0 | 1ULL << 16 | 1ULL << 32 | 1ULL << 48 )
+#define V9_MSBS_STEP_4 ( 0x8ULL * V9_ONES_STEP_4 )
+#define V9_MSBS_STEP_8 ( 0x80ULL * V9_ONES_STEP_8 )
+#define V9_MSBS_STEP_9 ( 0x100ULL * V9_ONES_STEP_9 )
+#define V9_MSBS_STEP_16 ( 0x8000ULL * V9_ONES_STEP_16 )
+#define V9_INCR_STEP_8 ( 0x80ULL << 56 | 0x40ULL << 48 | 0x20ULL << 40 | 0x10ULL << 32 | 0x8ULL << 24 | 0x4ULL << 16 | 0x2ULL << 8 | 0x1 )
 
-#define ONES_STEP_32 ( 0x0000000100000001ULL )
-#define MSBS_STEP_32 ( 0x8000000080000000ULL )
+#define V9_ONES_STEP_32 ( 0x0000000100000001ULL )
+#define V9_MSBS_STEP_32 ( 0x8000000080000000ULL )
 
-#define COMPARE_STEP_8(x,y) ( ( ( ( ( (x) | MSBS_STEP_8 ) - ( (y) & ~MSBS_STEP_8 ) ) ^ (x) ^ ~(y) ) & MSBS_STEP_8 ) >> 7 )
-#define LEQ_STEP_8(x,y) ( ( ( ( ( (y) | MSBS_STEP_8 ) - ( (x) & ~MSBS_STEP_8 ) ) ^ (x) ^ (y) ) & MSBS_STEP_8 ) >> 7 )
+#define V9_COMPARE_STEP_8(x,y) ( ( ( ( ( (x) | V9_MSBS_STEP_8 ) - ( (y) & ~V9_MSBS_STEP_8 ) ) ^ (x) ^ ~(y) ) & V9_MSBS_STEP_8 ) >> 7 )
+#define V9_LEQ_STEP_8(x,y) ( ( ( ( ( (y) | V9_MSBS_STEP_8 ) - ( (x) & ~V9_MSBS_STEP_8 ) ) ^ (x) ^ (y) ) & V9_MSBS_STEP_8 ) >> 7 )
 
-#define UCOMPARE_STEP_9(x,y) ( ( ( ( ( ( (x) | MSBS_STEP_9 ) - ( (y) & ~MSBS_STEP_9 ) ) | ( x ^ y ) ) ^ ( x | ~y ) ) & MSBS_STEP_9 ) >> 8 )
-#define UCOMPARE_STEP_16(x,y) ( ( ( ( ( ( (x) | MSBS_STEP_16 ) - ( (y) & ~MSBS_STEP_16 ) ) | ( x ^ y ) ) ^ ( x | ~y ) ) & MSBS_STEP_16 ) >> 15 )
-#define ULEQ_STEP_9(x,y) ( ( ( ( ( ( (y) | MSBS_STEP_9 ) - ( (x) & ~MSBS_STEP_9 ) ) | ( x ^ y ) ) ^ ( x & ~y ) ) & MSBS_STEP_9 ) >> 8 )
-#define ULEQ_STEP_16(x,y) ( ( ( ( ( ( (y) | MSBS_STEP_16 ) - ( (x) & ~MSBS_STEP_16 ) ) | ( x ^ y ) ) ^ ( x & ~y ) ) & MSBS_STEP_16 ) >> 15 )
-#define ZCOMPARE_STEP_8(x) ( ( ( x | ( ( x | MSBS_STEP_8 ) - ONES_STEP_8 ) ) & MSBS_STEP_8 ) >> 7 )
+#define V9_UCOMPARE_STEP_9(x,y) ( ( ( ( ( ( (x) | V9_MSBS_STEP_9 ) - ( (y) & ~V9_MSBS_STEP_9 ) ) | ( x ^ y ) ) ^ ( x | ~y ) ) & V9_MSBS_STEP_9 ) >> 8 )
+#define V9_UCOMPARE_STEP_16(x,y) ( ( ( ( ( ( (x) | V9_MSBS_STEP_16 ) - ( (y) & ~V9_MSBS_STEP_16 ) ) | ( x ^ y ) ) ^ ( x | ~y ) ) & V9_MSBS_STEP_16 ) >> 15 )
+#define V9_ULEQ_STEP_9(x,y) ( ( ( ( ( ( (y) | V9_MSBS_STEP_9 ) - ( (x) & ~V9_MSBS_STEP_9 ) ) | ( x ^ y ) ) ^ ( x & ~y ) ) & V9_MSBS_STEP_9 ) >> 8 )
+#define V9_ULEQ_STEP_16(x,y) ( ( ( ( ( ( (y) | V9_MSBS_STEP_16 ) - ( (x) & ~V9_MSBS_STEP_16 ) ) | ( x ^ y ) ) ^ ( x & ~y ) ) & V9_MSBS_STEP_16 ) >> 15 )
+#define V9_ZCOMPARE_STEP_8(x) ( ( ( x | ( ( x | V9_MSBS_STEP_8 ) - V9_ONES_STEP_8 ) ) & V9_MSBS_STEP_8 ) >> 7 )
 
-#define EASY_LEQ_STEP_8(x,y) ( ( ( ( ( (y) | MSBS_STEP_8 ) - ( x ) ) ) & MSBS_STEP_8 ) >> 7 )
+#define V9_EASY_LEQ_STEP_8(x,y) ( ( ( ( ( (y) | V9_MSBS_STEP_8 ) - ( x ) ) ) & V9_MSBS_STEP_8 ) >> 7 )
 
 //! Namespace for the succinct data structure library.
 namespace sdsl
@@ -247,161 +247,6 @@ struct select_support_v9_trait<01,2> {
     }
 };
 
-
-const uint8_t select_in_byte[] = {
-    0,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    7,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-    4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,
-
-    0,0,0,1,0,2,2,1,0,3,3,1,3,2,2,1,
-    0,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    0,5,5,1,5,2,2,1,5,3,3,1,3,2,2,1,
-    5,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    0,6,6,1,6,2,2,1,6,3,3,1,3,2,2,1,
-    6,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    6,5,5,1,5,2,2,1,5,3,3,1,3,2,2,1,
-    5,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    0,7,7,1,7,2,2,1,7,3,3,1,3,2,2,1,
-    7,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    7,5,5,1,5,2,2,1,5,3,3,1,3,2,2,1,
-    5,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    7,6,6,1,6,2,2,1,6,3,3,1,3,2,2,1,
-    6,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-    6,5,5,1,5,2,2,1,5,3,3,1,3,2,2,1,
-    5,4,4,1,4,2,2,1,4,3,3,1,3,2,2,1,
-
-    0,0,0,0,0,0,0,2,0,0,0,3,0,3,3,2,
-    0,0,0,4,0,4,4,2,0,4,4,3,4,3,3,2,
-    0,0,0,5,0,5,5,2,0,5,5,3,5,3,3,2,
-    0,5,5,4,5,4,4,2,5,4,4,3,4,3,3,2,
-    0,0,0,6,0,6,6,2,0,6,6,3,6,3,3,2,
-    0,6,6,4,6,4,4,2,6,4,4,3,4,3,3,2,
-    0,6,6,5,6,5,5,2,6,5,5,3,5,3,3,2,
-    6,5,5,4,5,4,4,2,5,4,4,3,4,3,3,2,
-    0,0,0,7,0,7,7,2,0,7,7,3,7,3,3,2,
-    0,7,7,4,7,4,4,2,7,4,4,3,4,3,3,2,
-    0,7,7,5,7,5,5,2,7,5,5,3,5,3,3,2,
-    7,5,5,4,5,4,4,2,5,4,4,3,4,3,3,2,
-    0,7,7,6,7,6,6,2,7,6,6,3,6,3,3,2,
-    7,6,6,4,6,4,4,2,6,4,4,3,4,3,3,2,
-    7,6,6,5,6,5,5,2,6,5,5,3,5,3,3,2,
-    6,5,5,4,5,4,4,2,5,4,4,3,4,3,3,2,
-
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,
-    0,0,0,0,0,0,0,4,0,0,0,4,0,4,4,3,
-    0,0,0,0,0,0,0,5,0,0,0,5,0,5,5,3,
-    0,0,0,5,0,5,5,4,0,5,5,4,5,4,4,3,
-    0,0,0,0,0,0,0,6,0,0,0,6,0,6,6,3,
-    0,0,0,6,0,6,6,4,0,6,6,4,6,4,4,3,
-    0,0,0,6,0,6,6,5,0,6,6,5,6,5,5,3,
-    0,6,6,5,6,5,5,4,6,5,5,4,5,4,4,3,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,3,
-    0,0,0,7,0,7,7,4,0,7,7,4,7,4,4,3,
-    0,0,0,7,0,7,7,5,0,7,7,5,7,5,5,3,
-    0,7,7,5,7,5,5,4,7,5,5,4,5,4,4,3,
-    0,0,0,7,0,7,7,6,0,7,7,6,7,6,6,3,
-    0,7,7,6,7,6,6,4,7,6,6,4,6,4,4,3,
-    0,7,7,6,7,6,6,5,7,6,6,5,6,5,5,3,
-    7,6,6,5,6,5,5,4,6,5,5,4,5,4,4,3,
-
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,
-    0,0,0,0,0,0,0,5,0,0,0,5,0,5,5,4,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
-    0,0,0,0,0,0,0,6,0,0,0,6,0,6,6,4,
-    0,0,0,0,0,0,0,6,0,0,0,6,0,6,6,5,
-    0,0,0,6,0,6,6,5,0,6,6,5,6,5,5,4,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,4,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,5,
-    0,0,0,7,0,7,7,5,0,7,7,5,7,5,5,4,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,6,
-    0,0,0,7,0,7,7,6,0,7,7,6,7,6,6,4,
-    0,0,0,7,0,7,7,6,0,7,7,6,7,6,6,5,
-    0,7,7,6,7,6,6,5,7,6,6,5,6,5,5,4,
-
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
-    0,0,0,0,0,0,0,6,0,0,0,6,0,6,6,5,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,5,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,6,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,6,
-    0,0,0,7,0,7,7,6,0,7,7,6,7,6,6,5,
-
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
-    0,0,0,0,0,0,0,7,0,0,0,7,0,7,7,6,
-
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7
-};
-
-__inline int select_in_word( const uint64_t x, const int rank ) {
-    // Phase 1: sums by byte
-    uint64_t byte_sums = x - ( ( x & 0xa * ONES_STEP_4 ) >> 1 );
-    byte_sums = ( byte_sums & 3 * ONES_STEP_4 ) + ( ( byte_sums >> 2 ) & 3 * ONES_STEP_4 );
-    byte_sums = ( byte_sums + ( byte_sums >> 4 ) ) & 0x0f * ONES_STEP_8;
-    byte_sums *= ONES_STEP_8;
-    // Phase 2: compare each byte sum with rank
-    const uint64_t rank_plus_1_step_8 = ( rank + 0 ) * ONES_STEP_8;
-    const int place = ( EASY_LEQ_STEP_8( byte_sums, rank_plus_1_step_8 ) * ONES_STEP_8 >> 53 ) & ~0x7;
-
-    // Phase 3: Compute the rank in the relevant byte and use lookup table.
-    const int byte_rank = ( rank + 0 ) - ( ( byte_sums << 8 ) >> place & 0xFF );
-    return place + select_in_byte[ x >> place & 0xFF | byte_rank << 8 ];
-}
-
-
 //! A class supporting constant time select queries (proposed by Munro/Clark, 1996) enhanced by broadword computing tricks.
 /*!
  * \par Space usage
@@ -527,145 +372,144 @@ void select_support_v9<b,pattern_len>::init(const int_vector<1>* v)
 
     size_t num_bits = v->size();
     uint64_t* bits = (uint64_t*) v->data();
-    num_words = ( num_bits + 63 ) / 64;
-    num_counts = ( ( num_bits + 64 * 8 - 1 ) / ( 64 * 8 ) ) * 2;
+    num_words = (num_bits + 63) / 64;
+    num_counts = ((num_bits + 64 * 8 - 1) / (64 * 8)) * 2;
 
     // Init rank/select structure
     m_counts.resize(num_counts + 1);
     uint64_t* counts = (uint64_t*) m_counts.data();
-    memset( counts, 0, ( num_counts + 1 ) * sizeof *counts );
+    memset(counts, 0, (num_counts + 1) * sizeof *counts);
 
     uint64_t c = 0;
     uint64_t pos = 0;
-    for( uint64_t i = 0; i < num_words; i += 8, pos += 2 ) {
+    for (uint64_t i = 0; i < num_words; i += 8, pos += 2) {
         counts[ pos ] = c;
-        c += __builtin_popcountll( bits[ i ] );
-        for( int j = 1;  j < 8; j++ ) {
-            counts[ pos + 1 ] |= ( c - counts[ pos ] ) << 9 * ( j - 1 );
-            if ( i + j < num_words ) c += __builtin_popcountll( bits[ i + j ] );
+        c += bit_magic::b1Cnt(bits[ i ]);
+        for (int j = 1;  j < 8; j++) {
+            counts[ pos + 1 ] |= (c - counts[ pos ]) << 9 * (j - 1);
+            if (i + j < num_words) c += bit_magic::b1Cnt(bits[ i + j ]);
         }
     }
 
     counts[ num_counts ] = c;
 #ifdef DEBUG
-    printf("Number of ones: %lld\n", c );
+    printf("Number of ones: %lld\n", c);
 #endif
-    assert( c <= num_bits );
+    assert(c <= num_bits);
 
-    inventory_size = ( c + ONES_PER_INVENTORY - 1 ) / ONES_PER_INVENTORY;
+    inventory_size = (c + V9_ONES_PER_INVENTORY - 1) / V9_ONES_PER_INVENTORY;
 
 #ifdef DEBUG
-    printf("Number of ones per inventory item: %d\n", ONES_PER_INVENTORY );
-    assert( ONES_PER_INVENTORY <= 8 * 64 );
+    printf("Number of ones per inventory item: %d\n", V9_ONES_PER_INVENTORY);
+    assert(V9_ONES_PER_INVENTORY <= 8 * 64);
 #endif
 
     m_inventory.resize(inventory_size + 1);
     uint64_t* inventory = (uint64_t*) m_inventory.data();
-    memset( inventory, 0, ( inventory_size + 1 ) * sizeof *inventory );
-    m_subinventory.resize(( num_words + 3 ) / 4);
+    memset(inventory, 0, (inventory_size + 1) * sizeof *inventory);
+    m_subinventory.resize((num_words + 3) / 4);
     uint64_t* subinventory = (uint64_t*) m_subinventory.data();
-    memset( subinventory, 0, ( ( num_words + 3 ) / 4 ) * sizeof *subinventory );
+    memset(subinventory, 0, ((num_words + 3) / 4) * sizeof *subinventory);
 
     uint64_t d = 0;
-    for( uint64_t i = 0; i < num_words; i++ )
-        for( int j = 0; j < 64; j++ )
-            if ( bits[ i ] & 1ULL << j ) {
-                if ( ( d & INVENTORY_MASK ) == 0 ) {
-                    inventory[ d >> LOG2_ONES_PER_INVENTORY ] = i * 64 + j;
-                    assert( counts[ ( i / 8 ) * 2 ] <= d );
-                    assert( counts[ ( i / 8 ) * 2 + 2 ] > d );
+    for (uint64_t i = 0; i < num_words; i++)
+        for (int j = 0; j < 64; j++)
+            if (bits[ i ] & 1ULL << j) {
+                if ((d & V9_INVENTORY_MASK) == 0) {
+                    inventory[ d >> V9_LOG2_ONES_PER_INVENTORY ] = i * 64 + j;
+                    assert(counts[(i / 8) * 2 ] <= d);
+                    assert(counts[(i / 8) * 2 + 2 ] > d);
                 }
 
                 d++;
             }
 
-    assert( c == d );
-    inventory[ inventory_size ] = ( ( num_words + 3 ) & ~3ULL ) * 64;
+    assert(c == d);
+    inventory[ inventory_size ] = ((num_words + 3) & ~3ULL) * 64;
 
 #ifdef DEBUG
-    printf("Inventory entries filled: %lld\n", d / ONES_PER_INVENTORY + 1 );
+    printf("Inventory entries filled: %lld\n", d / V9_ONES_PER_INVENTORY + 1);
 
 
-    printf("First inventories: %lld %lld %lld %lld\n", inventory[ 0 ], inventory[ 1 ], inventory[ 2 ], inventory[ 3 ] );
+    printf("First inventories: %lld %lld %lld %lld\n", inventory[ 0 ], inventory[ 1 ], inventory[ 2 ], inventory[ 3 ]);
 #endif
 
     d = 0;
     int state;
-    uint64_t *s, first_bit, index, span, block_span, block_left, counts_at_start;
+    uint64_t* s, first_bit, index, span, block_span, block_left, counts_at_start;
 
-    for( uint64_t i = 0; i < num_words; i++ ) {
-        for( int j = 0; j < 64; j++ ) {
-            if ( bits[ i ] & 1ULL << j ) {
-                if ( ( d & INVENTORY_MASK ) == 0 ) {
+    for (uint64_t i = 0; i < num_words; i++) {
+        for (int j = 0; j < 64; j++) {
+            if (bits[ i ] & 1ULL << j) {
+                if ((d & V9_INVENTORY_MASK) == 0) {
                     first_bit = i * 64 + j;
-                    index = d >> LOG2_ONES_PER_INVENTORY;
-                    assert( inventory[ index ] == first_bit );
-                    s = &subinventory[ ( inventory[ index ] / 64 ) / 4 ];
-                    span = ( inventory[ index + 1 ] / 64 ) / 4 - ( inventory[ index ] / 64 ) / 4;
+                    index = d >> V9_LOG2_ONES_PER_INVENTORY;
+                    assert(inventory[ index ] == first_bit);
+                    s = &subinventory[(inventory[ index ] / 64) / 4 ];
+                    span = (inventory[ index + 1 ] / 64) / 4 - (inventory[ index ] / 64) / 4;
                     state = -1;
-                    counts_at_start = counts[ ( ( inventory[ index ] / 64 ) / 8 ) * 2 ];
-                    block_span = ( inventory[ index + 1 ] / 64 ) / 8 - ( inventory[ index ] / 64 ) / 8;
-                    block_left = ( inventory[ index ] / 64 ) / 8;
+                    counts_at_start = counts[((inventory[ index ] / 64) / 8) * 2 ];
+                    block_span = (inventory[ index + 1 ] / 64) / 8 - (inventory[ index ] / 64) / 8;
+                    block_left = (inventory[ index ] / 64) / 8;
 
-                    if ( span >= 512 ) state = 0;
-                    else if ( span >= 256 ) state = 1;
-                    else if ( span >= 128 ) state = 2;
-                    else if ( span >= 16 ) {
-                        assert( ( block_span + 8 & -8LL ) + 8 <= span * 4 );
-
-                        int k;
-                        for( k = 0; k < block_span; k++ ) {
-                            assert( ((uint16_t *)s)[ k + 8 ] == 0 );
-                            ((uint16_t *)s)[ k + 8 ] = counts[ ( block_left + k + 1 ) * 2 ] - counts_at_start;
-                        }
-
-                        for( ; k < ( block_span + 8 & -8LL ); k++ ) {
-                            assert( ((uint16_t *)s)[ k + 8 ] == 0 );
-                            ((uint16_t *)s)[ k + 8 ] = 0xFFFFU;
-                        }
-
-                        assert( block_span / 8 <= 8 );
-
-                        for( k = 0; k < block_span / 8; k++ ) {
-                            assert( ((uint16_t *)s)[ k ] == 0 );
-                            ((uint16_t *)s)[ k ] = counts[ ( block_left + ( k + 1 ) * 8 ) * 2 ] - counts_at_start;
-                        }
-
-                        for( ; k < 8; k++ ) {
-                            assert( ((uint16_t *)s)[ k ] == 0 );
-                            ((uint16_t *)s)[ k ] = 0xFFFFU;
-                        }
-                    }
-                    else if ( span >= 2 ) {
-                        assert( ( block_span + 8 & -8LL ) <= span * 4 );
+                    if (span >= 512) state = 0;
+                    else if (span >= 256) state = 1;
+                    else if (span >= 128) state = 2;
+                    else if (span >= 16) {
+                        assert((block_span + 8 & -8LL) + 8 <= span * 4);
 
                         int k;
-                        for( k = 0; k < block_span; k++ ) {
-                            assert( ((uint16_t *)s)[ k ] == 0 );
-                            ((uint16_t *)s)[ k ] = counts[ ( block_left + k + 1 ) * 2 ] - counts_at_start;
+                        for (k = 0; k < block_span; k++) {
+                            assert(((uint16_t*)s)[ k + 8 ] == 0);
+                            ((uint16_t*)s)[ k + 8 ] = counts[(block_left + k + 1) * 2 ] - counts_at_start;
                         }
 
-                        for( ; k < ( block_span + 8 & -8LL ); k++ ) {
-                            assert( ((uint16_t *)s)[ k ] == 0 );
-                            ((uint16_t *)s)[ k ] = 0xFFFFU;
+                        for (; k < (block_span + 8 & -8LL); k++) {
+                            assert(((uint16_t*)s)[ k + 8 ] == 0);
+                            ((uint16_t*)s)[ k + 8 ] = 0xFFFFU;
+                        }
+
+                        assert(block_span / 8 <= 8);
+
+                        for (k = 0; k < block_span / 8; k++) {
+                            assert(((uint16_t*)s)[ k ] == 0);
+                            ((uint16_t*)s)[ k ] = counts[(block_left + (k + 1) * 8) * 2 ] - counts_at_start;
+                        }
+
+                        for (; k < 8; k++) {
+                            assert(((uint16_t*)s)[ k ] == 0);
+                            ((uint16_t*)s)[ k ] = 0xFFFFU;
+                        }
+                    } else if (span >= 2) {
+                        assert((block_span + 8 & -8LL) <= span * 4);
+
+                        int k;
+                        for (k = 0; k < block_span; k++) {
+                            assert(((uint16_t*)s)[ k ] == 0);
+                            ((uint16_t*)s)[ k ] = counts[(block_left + k + 1) * 2 ] - counts_at_start;
+                        }
+
+                        for (; k < (block_span + 8 & -8LL); k++) {
+                            assert(((uint16_t*)s)[ k ] == 0);
+                            ((uint16_t*)s)[ k ] = 0xFFFFU;
                         }
                     }
                 }
 
-                switch( state ) {
+                switch (state) {
                     case 0:
-                        assert( s[ d & INVENTORY_MASK ] == 0 );
-                        s[ d & INVENTORY_MASK ] = i * 64 + j;
+                        assert(s[ d & V9_INVENTORY_MASK ] == 0);
+                        s[ d & V9_INVENTORY_MASK ] = i * 64 + j;
                         break;
                     case 1:
-                        assert( ((uint32_t *)s)[ d & INVENTORY_MASK ] == 0 );
-                        assert( i * 64 + j - first_bit < (1ULL << 32) );
-                        ((uint32_t *)s)[ d & INVENTORY_MASK ] = i * 64 + j - first_bit;
+                        assert(((uint32_t*)s)[ d & V9_INVENTORY_MASK ] == 0);
+                        assert(i * 64 + j - first_bit < (1ULL << 32));
+                        ((uint32_t*)s)[ d & V9_INVENTORY_MASK ] = i * 64 + j - first_bit;
                         break;
                     case 2:
-                        assert( ((uint16_t *)s)[ d & INVENTORY_MASK ] == 0 );
-                        assert( i * 64 + j - first_bit < (1 << 16) );
-                        ((uint16_t *)s)[ d & INVENTORY_MASK ] = i * 64 + j - first_bit;
+                        assert(((uint16_t*)s)[ d & V9_INVENTORY_MASK ] == 0);
+                        assert(i * 64 + j - first_bit < (1 << 16));
+                        ((uint16_t*)s)[ d & V9_INVENTORY_MASK ] = i * 64 + j - first_bit;
                         break;
                 }
 
@@ -685,131 +529,126 @@ inline const typename select_support_v9<b,pattern_len>::size_type select_support
     const uint64_t* inventory = m_inventory.data();
     const uint64_t* bits = m_v->data();
 
-    const uint64_t inventory_index_left = rank >> LOG2_ONES_PER_INVENTORY;
-    assert( inventory_index_left < inventory_size );
+    const uint64_t inventory_index_left = rank >> V9_LOG2_ONES_PER_INVENTORY;
+    assert(inventory_index_left < inventory_size);
 
     const uint64_t inventory_left = inventory[ inventory_index_left ];
     const uint64_t block_right = inventory[ inventory_index_left + 1 ] / 64;
     uint64_t block_left = inventory_left / 64;
     const uint64_t span = block_right / 4 - block_left / 4;
-    const uint64_t * const s = &subinventory[ block_left / 4 ];
+    const uint64_t* const s = &subinventory[ block_left / 4 ];
     uint64_t count_left, rank_in_block;
 
 #ifdef DEBUG
-    printf( "Initially, rank: %lld block_left: %lld block_right: %lld span: %lld\n", rank, block_left, block_right, span );
+    printf("Initially, rank: %lld block_left: %lld block_right: %lld span: %lld\n", rank, block_left, block_right, span);
 #endif
 
-    if ( span < 2 ) {
+    if (span < 2) {
         block_left &= ~7;
         count_left = block_left / 4 & ~1;
-        assert( rank < counts[ count_left + 2 ] );
+        assert(rank < counts[ count_left + 2 ]);
         rank_in_block = rank - counts[ count_left ];
 #ifdef DEBUG
-        printf( "Single span; rank_in_block: %lld block_left: %lld\n", rank_in_block, block_left );
+        printf("Single span; rank_in_block: %lld block_left: %lld\n", rank_in_block, block_left);
 #endif
 #ifdef COUNTS
         single++;
 #endif
-    }
-    else if ( span < 16 ) {
+    } else if (span < 16) {
         block_left &= ~7;
         count_left = block_left / 4 & ~1;
         const uint64_t rank_in_superblock = rank - counts[ count_left ];
-        const uint64_t rank_in_superblock_step_16 = rank_in_superblock * ONES_STEP_16;
+        const uint64_t rank_in_superblock_step_16 = rank_in_superblock * V9_ONES_STEP_16;
 
         const uint64_t first = s[ 0 ], second = s[ 1 ];
-        const int where = ( ULEQ_STEP_16( first, rank_in_superblock_step_16 ) + ULEQ_STEP_16( second, rank_in_superblock_step_16 ) ) * ONES_STEP_16 >> 47;
-        assert( where >= 0 );
-        assert( where <= 16 );
+        const int where = (V9_ULEQ_STEP_16(first, rank_in_superblock_step_16) + V9_ULEQ_STEP_16(second, rank_in_superblock_step_16)) * V9_ONES_STEP_16 >> 47;
+        assert(where >= 0);
+        assert(where <= 16);
 #ifdef DEBUG
-        printf( "rank_in_superblock: %lld (%llx) %llx %llx\n", rank_in_superblock, rank_in_superblock, s[0], s[1] );
+        printf("rank_in_superblock: %lld (%llx) %llx %llx\n", rank_in_superblock, rank_in_superblock, s[0], s[1]);
 #endif
 
         block_left += where * 4;
         count_left += where;
         rank_in_block = rank - counts[ count_left ];
-        assert( rank_in_block >= 0 );
-        assert( rank_in_block < 512 );
+        assert(rank_in_block >= 0);
+        assert(rank_in_block < 512);
 #ifdef DEBUG
-        printf( "Found where (1): %d rank_in_block: %lld block_left: %lld\n", where, rank_in_block, block_left );
-        printf( "supercounts: %016llx %016llx\n", s[0], s[1] );
+        printf("Found where (1): %d rank_in_block: %lld block_left: %lld\n", where, rank_in_block, block_left);
+        printf("supercounts: %016llx %016llx\n", s[0], s[1]);
 #endif
 #ifdef COUNTS
         one_level++;
 #endif
-    }
-    else if ( span < 128 ) {
+    } else if (span < 128) {
         block_left &= ~7;
         count_left = block_left / 4 & ~1;
         const uint64_t rank_in_superblock = rank - counts[ count_left ];
-        const uint64_t rank_in_superblock_step_16 = rank_in_superblock * ONES_STEP_16;
+        const uint64_t rank_in_superblock_step_16 = rank_in_superblock * V9_ONES_STEP_16;
 
         const uint64_t first = s[ 0 ], second = s[ 1 ];
-        const int where0 = ( ULEQ_STEP_16( first, rank_in_superblock_step_16 ) + ULEQ_STEP_16( second, rank_in_superblock_step_16 ) ) * ONES_STEP_16 >> 47;
-        assert( where0 <= 16 );
+        const int where0 = (V9_ULEQ_STEP_16(first, rank_in_superblock_step_16) + V9_ULEQ_STEP_16(second, rank_in_superblock_step_16)) * V9_ONES_STEP_16 >> 47;
+        assert(where0 <= 16);
         const uint64_t first_bis = s[ where0 + 2 ], second_bis = s[ where0 + 2 + 1 ];
-        const int where1 = where0 * 8 + ( ( ULEQ_STEP_16( first_bis, rank_in_superblock_step_16 ) + ULEQ_STEP_16( second_bis, rank_in_superblock_step_16 ) ) * ONES_STEP_16 >> 47 );
+        const int where1 = where0 * 8 + ((V9_ULEQ_STEP_16(first_bis, rank_in_superblock_step_16) + V9_ULEQ_STEP_16(second_bis, rank_in_superblock_step_16)) * V9_ONES_STEP_16 >> 47);
 
         block_left += where1 * 4;
         count_left += where1;
         rank_in_block = rank - counts[ count_left ];
-        assert( rank_in_block >= 0 );
-        assert( rank_in_block < 512 );
+        assert(rank_in_block >= 0);
+        assert(rank_in_block < 512);
 
 #ifdef DEBUG
-        printf( "Found where (2): %d rank_in_block: %lld block_left: %lld\n", where1, rank_in_block, block_left );
+        printf("Found where (2): %d rank_in_block: %lld block_left: %lld\n", where1, rank_in_block, block_left);
 #endif
 #ifdef COUNTS
         two_levels++;
 #endif
-    }
-    else if ( span < 256 ) {
+    } else if (span < 256) {
 #ifdef COUNTS
         shorts++;
 #endif
-        return ((uint16_t*)s)[ rank % ONES_PER_INVENTORY ] + inventory_left;
-    }
-    else if ( span < 512 ) {
+        return ((uint16_t*)s)[ rank % V9_ONES_PER_INVENTORY ] + inventory_left;
+    } else if (span < 512) {
 #ifdef COUNTS
         longs++;
 #endif
-        return ((uint32_t*)s)[ rank % ONES_PER_INVENTORY ] + inventory_left;
-    }
-    else {
+        return ((uint32_t*)s)[ rank % V9_ONES_PER_INVENTORY ] + inventory_left;
+    } else {
 #ifdef COUNTS
         longlongs++;
 #endif
-        return s[ rank % ONES_PER_INVENTORY ];
+        return s[ rank % V9_ONES_PER_INVENTORY ];
     }
 
-    const uint64_t rank_in_block_step_9 = rank_in_block * ONES_STEP_9;
+    const uint64_t rank_in_block_step_9 = rank_in_block * V9_ONES_STEP_9;
     const uint64_t subcounts = counts[ count_left + 1 ];
-    const uint64_t offset_in_block = ( ULEQ_STEP_9( subcounts, rank_in_block_step_9 ) * ONES_STEP_9 >> 54 & 0x7 );
+    const uint64_t offset_in_block = (V9_ULEQ_STEP_9(subcounts, rank_in_block_step_9) * V9_ONES_STEP_9 >> 54 & 0x7);
 
     const uint64_t word = block_left + offset_in_block;
-    const uint64_t rank_in_word = rank_in_block - ( subcounts >> ( offset_in_block - 1 & 7 ) * 9 & 0x1FF );
+    const uint64_t rank_in_word = rank_in_block - (subcounts >> (offset_in_block - 1 & 7) * 9 & 0x1FF);
 #ifdef DEBUG
-    printf( "rank_in_block: %lld offset_in_block: %lld rank_in_word: %lld compare: %016llx shift: %lld\n", rank_in_block, offset_in_block, rank_in_word, UCOMPARE_STEP_9( rank_in_block_step_9, subcounts ), subcounts >> ( offset_in_block - 1 ) * 9 & 0x1FF );
+    printf("rank_in_block: %lld offset_in_block: %lld rank_in_word: %lld compare: %016llx shift: %lld\n", rank_in_block, offset_in_block, rank_in_word, V9_UCOMPARE_STEP_9(rank_in_block_step_9, subcounts), subcounts >> (offset_in_block - 1) * 9 & 0x1FF);
 #endif
-    assert( offset_in_block >= 0 );
-    assert( offset_in_block <= 7 );
+    assert(offset_in_block >= 0);
+    assert(offset_in_block <= 7);
 
 #ifdef DEBUG
-    printf( "rank_in_block: %lld offset_in_block: %lld rank_in_word: %lld\n", rank_in_block, offset_in_block, rank_in_word );
-    printf( "subcounts: " );
-    for( int i = 0; i < 7; i++ ) printf( "%lld ", subcounts >> i * 9 & 0x1FF );
-    printf( "\n" );
-    fflush( stdout );
+    printf("rank_in_block: %lld offset_in_block: %lld rank_in_word: %lld\n", rank_in_block, offset_in_block, rank_in_word);
+    printf("subcounts: ");
+    for (int i = 0; i < 7; i++) printf("%lld ", subcounts >> i * 9 & 0x1FF);
+    printf("\n");
+    fflush(stdout);
 #endif
 
-    assert( rank_in_word < 64 );
-    assert( rank_in_word >= 0 );
+    assert(rank_in_word < 64);
+    assert(rank_in_word >= 0);
 
 #ifdef DEBUG
-    printf( "rank_in_word: %ld" , rank_in_word ); fflush( stdout );
-    printf( "Returning %ld %lld\n", rank_in_word, word * 64ULL + select_in_word( bits[ word ], rank_in_word ) );
+    printf("rank_in_word: %ld" , rank_in_word); fflush(stdout);
+    printf("Returning %ld %lld\n", rank_in_word, word * 64ULL + bit_magic::i1BP(bits[ word ], rank_in_word + 1));
 #endif
-    return word * 64ULL + select_in_word( bits[ word ], rank_in_word );
+    return word * 64ULL + bit_magic::i1BP(bits[ word ], rank_in_word + 1);
 }
 
 template<uint8_t b, uint8_t pattern_len>

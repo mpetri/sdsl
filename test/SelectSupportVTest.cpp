@@ -2,8 +2,6 @@
 #include "sdsl/int_vector.hpp"
 #include "sdsl/select_support_vs.hpp" // for select_support_mcl
 #include "sdsl/select_support_v9.hpp" // for select_support_mcl
-#include "sdsl/select_support_vs_s7.hpp" // for select_support_mcl
-#include "sdsl/select_support_v9_s7.hpp" // for select_support_mcl
 #include "gtest/gtest.h"
 #include <vector>
 #include <cstdlib> // for rand()
@@ -85,7 +83,7 @@ class SelectSupportTest : public ::testing::Test
 
 using testing::Types;
 
-typedef Types<sdsl::select_support_vs<> , sdsl::select_support_v9<> , sdsl::select_support_vs_s7<> , sdsl::select_support_v9_s7<> > Implementations;
+typedef Types<sdsl::select_support_vs<> , sdsl::select_support_v9<>  > Implementations;
 
 TYPED_TEST_CASE(SelectSupportTest, Implementations);
 
@@ -100,7 +98,7 @@ TYPED_TEST(SelectSupportTest, SelectMethod)
                 ++select;
                 size_t pos = ss.select(select);
                 //fprintf(stderr, "pos %zu real %zu for select(%zu)\n",pos,j,select);
-				//EXPECT_EQ(pos, j) << " at query "<<select<<" of vector "<<i<<" of length "<<(this->bs[i]).size();
+                //EXPECT_EQ(pos, j) << " at query "<<select<<" of vector "<<i<<" of length "<<(this->bs[i]).size();
                 ASSERT_EQ(ss.select(select), j) << " at query "<<select<<" of vector "<<i<<" of length "<<(this->bs[i]).size();
             }
         }
