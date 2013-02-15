@@ -1192,13 +1192,13 @@ inline uint32_t bit_magic::i1BP_bw(uint64_t w, uint32_t k)
 
 inline uint32_t bit_magic::i1BP(uint64_t x, uint32_t i)
 {
-#ifdef POP_SSE
+#ifdef SELECT_SSE
     return i1BP_sse(x,i);
 #endif
-#ifdef POP_TABLE
+#ifdef SELECT_TABLE
     return i1BP_table(x,i);
 #endif
-#ifdef POP_BW
+#ifdef SELECT_BW
     return i1BP_bw(x,i);
 #endif
 #ifdef __SSE4_2__
